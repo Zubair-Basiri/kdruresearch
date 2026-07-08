@@ -49,7 +49,7 @@
                       </template>
                     </multiselect>
                   </div>
-                  <small class="text-muted">Select your name from the list of existing lecturers. If not available, please contact the Vice Chancellery of Research.</small>
+                  <small class="text-muted">Please select your name from the list of registered lecturers. If your name does not appear in the list, please submit your details (Full Name, Email, Phone Number, Faculty, Department) by emailing vicechancellor@kdru.edu.af or by contacting +93 771 260 003.</small>
                 </div>
 
                 <!-- Email -->

@@ -8,7 +8,7 @@
 export default {
   setup() {
     // const store = useStore()
-    const appName = "ARPMS"
+    const appName = "KURD"
     return { appName }
   }
 }

@@ -30,12 +30,12 @@ const authChildRoutes = (prefix) => [
     meta: { auth: false, name: 'Reset Password' },
     component: () => import('@/views/auth/default/ResetPassword.vue')
   },
-  {
-    path: 'lock-screen',
-    name: prefix + '.lock-screen',
-    meta: { auth: false, name: 'Lock Screen' },
-    component: () => import('@/views/auth/default/LockScreen.vue')
-  }
+  // {
+  //   path: 'lock-screen',
+  //   name: prefix + '.lock-screen',
+  //   meta: { auth: false, name: 'Lock Screen' },
+  //   component: () => import('@/views/auth/default/LockScreen.vue')
+  // }
 ];
 
 // Main app routes (protected)
@@ -168,12 +168,12 @@ const defaultChildRoutes = (prefix) => [
     component: () => import('@/views/user/ProfilePage.vue')
   },
   // Super admin only
-  {
-    path: 'admin-permissions',
-    name: 'default.admin-permissions',
-    meta: { auth: true, role: 'super_admin', name: 'Admin Permissions' },
-    component: () => import('@/views/admin/AdminPage.vue')
-  },
+  // {
+  //   path: 'admin-permissions',
+  //   name: 'default.admin-permissions',
+  //   meta: { auth: true, role: 'super_admin', name: 'Admin Permissions' },
+  //   component: () => import('@/views/admin/AdminPage.vue')
+  // },
   // Privacy Policy
   {
     path: 'privacy-policy',

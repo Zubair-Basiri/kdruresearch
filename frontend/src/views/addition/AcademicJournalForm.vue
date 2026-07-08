@@ -83,11 +83,32 @@
                   <select v-model="form.publication" class="form-select form-field">
                     <option value="">Select Type</option>
                     <option value="Peer-Reviewed Journal Article">Peer-Reviewed Journal Article</option>
+                    <option value="Review Article">Review Article</option>
                     <option value="Case Study">Case Study</option>
+                    <option value="Short Communication / Technical Note">Short Communication / Technical Note</option>
+                    <option value="Editorial / Commentary">Editorial / Commentary</option>
                     <option value="Conference Paper (Proceedings)">Conference Paper (Proceedings)</option>
+                    <option value="Conference Presentation (Abstract/Paper)">Conference Presentation (Abstract/Paper)</option>
+                    <option value="Workshop Paper">Workshop Paper</option>
                     <option value="Book (Authored)">Book (Authored)</option>
+                    <option value="Book (Edited Volume)">Book (Edited Volume)</option>
                     <option value="Book Chapter">Book Chapter</option>
                     <option value="Research Report">Research Report</option>
+                    <option value="Policy Brief">Policy Brief</option>
+                    <option value="Working Paper / Discussion Paper">Working Paper / Discussion Paper</option>
+                    <option value="Technical Report">Technical Report</option>
+                    <option value="PhD Thesis">PhD Thesis</option>
+                    <option value="Master's Dissertation">Master's Dissertation</option>
+                    <option value="Undergraduate Monograph">Undergraduate Monograph</option>
+                    <option value="Patent">Patent</option>
+                    <option value="Software / System Development">Software / System Development</option>
+                    <option value="Product / Prototype Development">Product / Prototype Development</option>
+                    <option value="Encyclopedia Entry">Encyclopedia Entry</option>
+                    <option value="Translation Work">Translation Work</option>
+                    <option value="Teaching Material / Module Development">Teaching Material / Module Development</option>
+                    <option value="Creative Work (Art, Design, Architecture, Performance)">Creative Work (Art, Design, Architecture, Performance)</option>
+                    <option value="Book (Authored) Academic">Book (Authored) Academic</option>
+                    <option value="Book (Authored) Non-academic">Book (Authored) Non-academic</option>
                     <!-- Add other options as needed -->
                   </select>
                   <div v-if="errors.publication" class="text-danger small mt-1">{{ errors.publication[0] }}</div>
@@ -98,11 +119,18 @@
                     <option value="">Select Index</option>
                     <option value="Scopus">Scopus</option>
                     <option value="Web of Science">Web of Science</option>
+                    <option value="PubMed/MEDLINE">PubMed/MEDLINE</option>
+                    <option value="Non-Indexed National (Conference Proceedings)">Non-Indexed National (Conference Proceedings)</option>
+                    <option value="ORI">ORI</option>
+                    <option value="Non-Indexed (peer reviewed)">Non-Indexed (peer reviewed)</option>
                     <option value="Q1">Q1</option>
                     <option value="Q2">Q2</option>
                     <option value="Q3">Q3</option>
                     <option value="Q4">Q4</option>
-                    <option value="Non-indexed (peer reviewed)">Non-indexed (peer reviewed)</option>
+                    <option value="N/A">N/A</option>
+                    <option value="Non-indexed (Conference Proceedings)">Non-indexed (Conference Proceedings)</option>
+                    <option value="Non-indexed (peer reviewed National)">Non-indexed (peer reviewed National)</option>
+                    <option value="Indexed (Conference Proceedings)">Indexed (Conference Proceedings)</option>
                   </select>
                   <div v-if="errors.indexed" class="text-danger small mt-1">{{ errors.indexed[0] }}</div>
                 </div>

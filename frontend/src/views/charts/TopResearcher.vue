@@ -23,7 +23,7 @@
         <div class="button-group">
           <button class="btn btn-primary" @click="generateTable">Generate Report</button>
           <button class="btn btn-outline" @click="clearTable">Reset</button>
-          <button class="btn btn-success" @click="downloadPDF">Export PDF (A4)</button>
+          <button v-if="!authStore.isGuest" class="btn btn-success" @click="downloadPDF">Export PDF (A4)</button>
         </div>
       </div>
 
@@ -87,6 +87,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth';
+const authStore = useAuthStore();
 
 /* ================= CONFIG ================= */
 const fields = [

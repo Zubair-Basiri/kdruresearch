@@ -97,4 +97,30 @@ class AuthController extends Controller
         }
         return response()->json(['message' => 'Not authenticated'], 401);
     }
+
+    public function guestLogin(Request $request)
+    {
+        // Find or create a guest user
+        $guest = User::firstOrCreate(
+            ['email' => 'guest@example.com'],
+            [
+                'name' => 'Guest User',
+                'password' => Hash::make('password'),
+                'role' => 'user',
+                'is_approved' => true,
+            ]
+        );
+
+        Auth::login($guest);
+        $request->session()->regenerate();
+
+        return response()->json([
+            'user' => [
+                'id'    => $guest->id,
+                'name'  => $guest->name,
+                'email' => $guest->email,
+                'role'  => $guest->role,
+            ]
+        ]);
+    }
 }

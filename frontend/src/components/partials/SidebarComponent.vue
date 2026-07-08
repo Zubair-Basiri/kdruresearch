@@ -13,6 +13,7 @@
 
       <!-- Add Section – visible to admin & super_admin only -->
       <side-menu
+      v-if="!authStore.isGuest"
         title="Add Section"
         icon="adjustment"
         toggle-id="menu-style"

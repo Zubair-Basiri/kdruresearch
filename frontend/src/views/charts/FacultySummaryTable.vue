@@ -67,7 +67,7 @@
               <button @click="page++" :disabled="page === totalPages">Next</button>
             </div>
             <div class="pdf-export-bar">
-              <button class="btn-pdf" @click="exportPdf">📄 Export as PDF</button>
+              <button v-if="!authStore.isGuest" class="btn-pdf" @click="exportPdf">📄 Export as PDF</button>
             </div>
           </div>
 
@@ -80,6 +80,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth';
+const authStore = useAuthStore();
 
 /* ================= UI STATE ================= */
 const showModal = ref(false)

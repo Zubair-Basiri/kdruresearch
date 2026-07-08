@@ -53,7 +53,7 @@
           <div class="modal-footer">
           
             <div class="pagination-controls">
-              <button class="btn-preview" @click="previewPdf">Preview & Download PDF</button>
+              <button v-if="!authStore.isGuest" class="btn-preview" @click="previewPdf">Preview & Download PDF</button>
               <button :disabled="page === 1" @click="page--">PREVIOUS</button>
               <span class="page-info">PAGE {{ page }} OF {{ totalPages }}</span>
               <button :disabled="page === totalPages" @click="page++">NEXT</button>
@@ -69,6 +69,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth';
+const authStore = useAuthStore();
 
 const showModal = ref(false)
 const page = ref(1)

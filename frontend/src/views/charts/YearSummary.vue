@@ -132,7 +132,7 @@
 
                 <!-- PAGINATION & PDF BUTTON -->
                 <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-                  <button class="btn-preview" @click="previewPdf">📄 Preview PDF</button>
+                  <button v-if="!authStore.isGuest" class="btn-preview" @click="previewPdf">📄 Preview PDF</button>
                   <div class="pagination-footer">
                     <button class="p-btn" @click="changePage(-1)" :disabled="currentPage === 1">← Previous</button>
                     <span class="page-info">Page <b>{{ currentPage }}</b> of <b>{{ totalPages }}</b></span>
@@ -152,6 +152,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import api from '@/services/api.js'
+import { useAuthStore } from '@/stores/auth';
+const authStore = useAuthStore();
 
 // ----------------------------- CONFIG -----------------------------
 const availableYears = ref(Array.from({ length: 26 }, (_, i) => 2000 + i)) // 2000–2025

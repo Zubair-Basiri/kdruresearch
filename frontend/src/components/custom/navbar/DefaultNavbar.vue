@@ -2,12 +2,15 @@
   <nav :class="['nav', 'navbar', 'navbar-expand-xl', 'navbar-light', 'iq-navbar', headerNavbar]">
     <div class="container-fluid navbar-inner">
       <slot></slot>
-      <!-- <div class="input-group search-input" v-if="isSearch">
-        <span class="input-group-text" id="search-input">
-          <icon-component type="outlined" :size="18" icon-name="search"></icon-component>
-        </span>
-        <input type="search" class="form-control" placeholder="Search..." />
-      </div> -->
+      <div class="d-flex align-items-center gap-2">
+        <RouterLink
+          v-if="authStore.isAuthenticated && !authStore.isGuest"
+          to="/dashboard/academicJournals/form?submission=true"
+          class="btn btn-add btn-sm d-flex gap-2 align-items-center"
+        >
+          <i class="bi bi-plus-circle"></i> New Submission
+        </RouterLink>
+      </div>
       <button
         class="navbar-toggler"
         type="button"
@@ -154,3 +157,20 @@ onUnmounted(() => {
   window.removeEventListener('scroll', onscroll)
 })
 </script>
+
+<style scoped>
+/* Add styles for the button if needed */
+.btn-add {
+  background: linear-gradient(135deg, #1971c2, #4dabf7);
+  color: #fff;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.btn-add:hover {
+  background: linear-gradient(135deg, #0f5a9e, #3a8cdb);
+  color: #fff;
+}
+</style>

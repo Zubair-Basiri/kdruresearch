@@ -37,15 +37,28 @@ class SubmittedPaperController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
-        if ($user->role !== 'user') {
-            return response()->json(['message' => 'Only lecturers can submit papers.'], 403);
+
+        // Allow user, admin, and super_admin
+        if (!in_array($user->role, ['user', 'admin', 'super_admin'])) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $lecturerId = $user->lecturer?->id;
-        if (!$lecturerId) {
-            return response()->json(['message' => 'No lecturer profile found.'], 400);
+        // Determine lecturer_id
+        if ($user->role === 'user') {
+            // Lecturer: use their own lecturer record
+            $lecturerId = $user->lecturer?->id;
+            if (!$lecturerId) {
+                return response()->json(['message' => 'No lecturer profile found.'], 400);
+            }
+        } else {
+            // Admin / super_admin: must provide a lecturer_id
+            $validated = $request->validate([
+                'lecturer_id' => 'required|exists:lecturers,id',
+            ]);
+            $lecturerId = $validated['lecturer_id'];
         }
 
+        // Validate the rest of the fields
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'year' => 'required|integer|min:1900|max:' . date('Y'),
@@ -56,7 +69,7 @@ class SubmittedPaperController extends Controller
             'collaboration' => 'nullable|string',
             'language' => 'nullable|string',
             'author_position' => 'nullable|string',
-            'status' => 'nullable|string|in:Published,Proposal Stage,Ongoing Research', // publication status
+            'status' => 'nullable|string|in:Published,Proposal Stage,Ongoing Research',
         ]);
 
         $submission = SubmittedPaper::create([

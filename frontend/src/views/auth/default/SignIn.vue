@@ -65,6 +65,12 @@
                   </router-link>
                 </p>
 
+                <p class="mt-2 text-center">
+                  <a href="#" class="text-primary fw-medium text-decoration-none" @click.prevent="guestLogin">
+                    Or login as a guest
+                  </a>
+                </p>
+
                 <!-- Designed by footer -->
                 <hr class="my-4" />
                 <p class="text-center footer-credit small">
@@ -102,6 +108,16 @@ async function handleLogin() {
     router.push({ name: 'default.dashboard' });
   } catch (err) {
     error.value = authStore.error || 'Login failed. Please check your credentials.';
+  }
+}
+
+async function guestLogin() {
+  error.value = null;
+  try {
+    await authStore.guestLogin();
+    router.push({ name: 'default.dashboard' });
+  } catch (err) {
+    error.value = authStore.error || 'Guest login failed.';
   }
 }
 </script>

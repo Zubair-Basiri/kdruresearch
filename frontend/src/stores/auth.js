@@ -13,6 +13,7 @@ export const useAuthStore = defineStore('auth', {
         isSuperAdmin: (state) => state.user?.role === 'super_admin',
         isAdmin: (state) => state.user?.role === 'admin',
         isUser: (state) => state.user?.role === 'user',
+        isGuest: (state) => state.user?.email === 'guest@example.com',
         hasRole: (state) => (roles) => {
             if (!state.user) return false;
             if (Array.isArray(roles)) {
@@ -90,6 +91,25 @@ export const useAuthStore = defineStore('auth', {
                 console.error('Logout error:', error);
                 this.user = null;
                 window.location.href = '/auth/login';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async guestLogin() {
+            this.loading = true;
+            this.error = null;
+            try {
+                // Get CSRF cookie (if using Sanctum)
+                await api.get('/sanctum/csrf-cookie');
+                // Small delay for cookie to set
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const response = await api.post('/api/guest-login');
+                this.user = response.data.user;
+                return response;
+            } catch (error) {
+                this.error = error.response?.data?.message || 'Guest login failed';
+                throw error;
             } finally {
                 this.loading = false;
             }

@@ -25,6 +25,7 @@ Route::get('/sanctum/csrf-cookie', function () {
     return response()->json(['message' => 'CSRF cookie set']);
 });
 Route::get('lecturers-for-dropdown', [LecturerController::class, 'forDropdown']);
+Route::post('/guest-login', [AuthController::class, 'guestLogin']);
 
 // Routes for all authenticated users (including lecturers)
 Route::middleware(['auth:sanctum'])->group(function () {
