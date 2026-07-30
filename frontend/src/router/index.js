@@ -142,6 +142,25 @@ const defaultChildRoutes = (prefix) => [
     meta: { auth: true, name: 'Edit Academic Journal', isBanner: true },
     component: () => import('@/views/addition/AcademicJournalForm.vue')
   },
+
+  {
+    path: 'lecturer-profiles',
+    name: 'lecturerProfiles',
+    meta: { auth: true, role: ['super_admin', 'admin_admin', 'lecturer_profile_admin'], name: 'Lecturer Profiles', isBanner: true },
+    component: () => import('@/views/addition/LecturerProfileList.vue')
+  },
+  {
+    path: 'lecturer-profiles/add',
+    name: 'lecturerProfilesAdd',
+    meta: { auth: true, role: ['super_admin', 'admin_admin', 'lecturer_profile_admin'], name: 'Add Lecturer Profile', isBanner: true },
+    component: () => import('@/views/addition/LecturerProfileForm.vue')
+  },
+  {
+    path: 'lecturer-profiles/edit/:id',
+    name: 'lecturerProfilesEdit',
+    meta: { auth: true, role: ['super_admin', 'admin_admin', 'lecturer_profile_admin'], name: 'Edit Lecturer Profile', isBanner: true },
+    component: () => import('@/views/addition/LecturerProfileForm.vue')
+  },
   // User management (admin only)
   {
     path: 'user-list',
@@ -235,6 +254,15 @@ router.beforeEach(async (to, from, next) => {
   
   // List of auth routes (no authentication required)
   const authRoutes = ['auth.login', 'auth.reset-password', 'auth.lock-screen'];
+
+  // If user is authenticated and is a lecturer_profile_admin, redirect to lecturer profiles
+  if (authStore.isAuthenticated && authStore.isLecturerProfileAdmin) {
+    const allowedRoutes = ['lecturerProfiles', 'lecturerProfilesAdd', 'lecturerProfilesEdit', 'default.user-profile'];
+    if (!allowedRoutes.includes(to.name)) {
+        next({ name: 'lecturerProfiles' });
+        return;
+    }
+}
 
   // If route requires auth and user is not authenticated
   if (requiresAuth && !authStore.isAuthenticated) {

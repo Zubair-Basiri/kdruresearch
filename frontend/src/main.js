@@ -3,6 +3,7 @@ import { createPinia } from 'pinia';
 import App from './App.vue';
 import './registerServiceWorker';
 import router from './router';
+import VuePersianDatetimePicker from 'vue-persian-datetime-picker';
 
 // Library Components
 import VueSweetalert2 from 'vue-sweetalert2';
@@ -24,6 +25,7 @@ const pinia = createPinia();
 // Apply plugins in order (all before mounting)
 app.use(pinia);
 app.use(router);
+app.component('date-picker', VuePersianDatetimePicker);
 
 // Library Components
 app.use(VueSweetalert2);

@@ -16,7 +16,7 @@
           <div>
             <label class="me-2 fw-semibold">Rows:</label>
             <select v-model="perPage" class="form-select d-inline-block w-auto">
-              <option v-for="n in [5,10,15,20]" :key="n" :value="n">{{ n }}</option>
+              <option v-for="n in [5,10,15,20,50,100]" :key="n" :value="n">{{ n }}</option>
             </select>
           </div>
         </div>

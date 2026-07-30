@@ -1,19 +1,25 @@
 <template>
-  <!-- Sidebar Component Start Here -->
   <default-sidebar>
     <ul class="navbar-nav iq-main-menu" id="sidebar-menu">
-      <!-- Home -->
-      <side-menu title="Home" :static-item="true"></side-menu>
+      <!-- Home – hidden for lecturer_profile_admin -->
       <side-menu
+        v-if="!authStore.isLecturerProfileAdmin"
+        title="Home"
+        :static-item="true"
+      ></side-menu>
+
+      <!-- Dashboard – hidden for lecturer_profile_admin -->
+      <side-menu
+        v-if="!authStore.isLecturerProfileAdmin"
         isTag="router-link"
         title="Dashboard"
         icon="view-grid"
         :route="{ to: 'default.dashboard' }"
       ></side-menu>
 
-      <!-- Add Section – visible to admin & super_admin only -->
+      <!-- Add Section – hidden for lecturer_profile_admin -->
       <side-menu
-      v-if="!authStore.isGuest"
+        v-if="!authStore.isLecturerProfileAdmin && !authStore.isGuest"
         title="Add Section"
         icon="adjustment"
         toggle-id="menu-style"
@@ -29,7 +35,6 @@
           accordion="sidebar-menu"
           :visible="currentRoute.includes('menu-style')"
         >
-          <!-- Admin-only items -->
           <side-menu
             v-if="authStore.hasRole(['admin', 'super_admin'])"
             title="University"
@@ -66,7 +71,6 @@
             miniTitle="L"
             :route="{ to: 'teachers' }"
           ></side-menu>
-          <!-- Academic Journals – visible to all -->
           <side-menu
             title="Academic Journals"
             icon="circle"
@@ -78,8 +82,17 @@
         </b-collapse>
       </side-menu>
 
+      <!-- Lecturer Profiles – visible to the new role -->
       <side-menu
-      v-if="authStore.hasRole(['admin', 'super_admin'])"
+        v-if="authStore.hasRole(['super_admin', 'admin_admin', 'lecturer_profile_admin'])"
+        title="Lecturer Profiles"
+        icon="user-group"
+        :route="{ to: 'lecturerProfiles' }"
+      ></side-menu>
+
+      <!-- Key Findings – hidden for lecturer_profile_admin -->
+      <side-menu
+        v-if="!authStore.isLecturerProfileAdmin && authStore.hasRole(['admin', 'super_admin'])"
         title="Key Findings"
         icon="table"
         :route="{ to: 'default.keyFindings' }"
@@ -87,21 +100,28 @@
 
       <li><hr class="hr-horizontal" /></li>
 
-      <!-- Graphs – visible to all authenticated users -->
-      <side-menu title="Graphs" :static-item="true"></side-menu>
+      <!-- Graphs section – hidden for lecturer_profile_admin -->
       <side-menu
+        v-if="!authStore.isLecturerProfileAdmin"
+        title="Graphs"
+        :static-item="true"
+      ></side-menu>
+      <side-menu
+        v-if="!authStore.isLecturerProfileAdmin"
         title="Top Researchers"
         icon="table"
         :route="{ to: 'default.topResearcher' }"
       ></side-menu>
       <side-menu
+        v-if="!authStore.isLecturerProfileAdmin"
         title="Year Summary"
         icon="wallet"
         :route="{ to: 'default.YearSummary' }"
       ></side-menu>
 
-      <!-- Faculty dropdown – visible to all -->
+      <!-- Faculty dropdown – hidden for lecturer_profile_admin -->
       <side-menu
+        v-if="!authStore.isLecturerProfileAdmin"
         title="Faculty"
         icon="document"
         toggle-id="special-pages"
@@ -117,11 +137,6 @@
           accordion="sidebar-menu"
           :visible="currentRoute.includes('special-pages')"
         >
-          <!-- <side-menu
-            title="Faculty Components"
-            icon="brief-case"
-            :route="{ to: 'default.facultySummary' }"
-          ></side-menu> -->
           <side-menu
             title="Faculty Summary"
             icon="document"
@@ -135,7 +150,9 @@
         </b-collapse>
       </side-menu>
 
+      <!-- Grade Summary – hidden for lecturer_profile_admin -->
       <side-menu
+        v-if="!authStore.isLecturerProfileAdmin"
         title="Grade Summary"
         icon="wallet"
         :route="{ to: 'default.GradeSummary' }"
@@ -143,23 +160,14 @@
 
       <li><hr class="hr-horizontal" /></li>
 
-      <!-- User Management – visible to admin & super_admin only -->
+      <!-- User Management – already admin-only, but also hide for lecturer_profile_admin -->
       <side-menu
-        v-if="authStore.hasRole(['super_admin'])"
+        v-if="!authStore.isLecturerProfileAdmin && authStore.hasRole(['super_admin'])"
         title="User Management"
         :static-item="true"
       ></side-menu>
-      <!-- <side-menu v-if="authStore.hasRole(['admin', 'super_admin'])" title="Authentication" icon="shield-check" toggle-id="auth-skins" :caret-icon="true" :route="{ popup: 'false', to: 'auth' }" @onClick="toggle" :active="currentRoute.includes('auth')">
-        <b-collapse tag="ul" class="sub-nav" id="auth-skins" accordion="sidebar-menu" :visible="currentRoute.includes('auth')">
-          <side-menu isTag="router-link" title="Login" icon="circle" :icon-size="10" icon-type="solid" miniTitle="L" :route="{ to: 'auth.login' }"></side-menu>
-          <side-menu isTag="router-link" title="Register" icon="circle" :icon-size="10" icon-type="solid" miniTitle="R" :route="{ to: 'auth.register' }"></side-menu>
-          <side-menu isTag="router-link" title="Confirm Mail" icon="circle" :icon-size="10" icon-type="solid" miniTitle="CM" :route="{ to: 'auth.varify-email' }"></side-menu>
-          <side-menu isTag="router-link" title="Lock Screen" icon="circle" :icon-size="10" icon-type="solid" miniTitle="LS" :route="{ to: 'auth.lock-screen' }"></side-menu>
-          <side-menu isTag="router-link" title="Recover Password" icon="circle" :icon-size="10" icon-type="solid" miniTitle="RP" :route="{ to: 'auth.reset-password' }"></side-menu>
-        </b-collapse>
-      </side-menu> -->
       <side-menu
-        v-if="authStore.hasRole(['super_admin'])"
+        v-if="!authStore.isLecturerProfileAdmin && authStore.hasRole(['super_admin'])"
         title="Users"
         icon="user-group"
         toggle-id="users"
@@ -176,6 +184,7 @@
           :visible="currentRoute.includes('user')"
         >
           <side-menu
+            v-if="authStore.isAuthenticated"
             isTag="router-link"
             title="User Profile"
             icon="circle"
@@ -184,15 +193,6 @@
             miniTitle="UP"
             :route="{ to: 'default.user-profile' }"
           ></side-menu>
-          <!-- <side-menu
-            isTag="router-link"
-            title="User Add"
-            icon="circle"
-            :icon-size="10"
-            icon-type="solid"
-            miniTitle="UA"
-            :route="{ to: 'default.user-add' }"
-          ></side-menu> -->
           <side-menu
             isTag="router-link"
             title="User List"
@@ -206,7 +206,6 @@
       </side-menu>
     </ul>
   </default-sidebar>
-  <!-- Sidebar Component End Here-->
 </template>
 
 <script setup>
@@ -220,7 +219,6 @@ const authStore = useAuthStore()
 const route = useRoute()
 const currentRoute = ref('')
 
-// Toggle logic for collapsible menus
 const toggle = (menu) => {
   if (menu === currentRoute.value && menu.includes('.')) {
     const parts = currentRoute.value.split('.')
@@ -236,7 +234,6 @@ const toggle = (menu) => {
   }
 }
 
-// Initialize currentRoute based on the current route name
 watch(
   () => route.name,
   (newName) => {

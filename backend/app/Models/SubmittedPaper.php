@@ -13,7 +13,7 @@ class SubmittedPaper extends Model
     protected $fillable = [
         'lecturer_id', 'title', 'year', 'publication', 'indexed', 'citation',
         'funding', 'collaboration', 'language', 'status', 'approval_status', 'author_position',
-        'admin_comment', 'approved_by', 'approved_at'
+        'admin_comment', 'approved_by', 'approved_at','paper_link',
     ];
 
     protected $casts = [

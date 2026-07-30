@@ -32,7 +32,7 @@
             <div>
               <label class="me-2 fw-semibold">Rows:</label>
               <select v-model="pubPerPage" class="form-select d-inline-block w-auto">
-                <option v-for="n in [5,10,15,20]" :key="n" :value="n">{{ n }}</option>
+                <option v-for="n in [5,10,15,20,50,100]" :key="n" :value="n">{{ n }}</option>
               </select>
             </div>
           </div>
@@ -100,6 +100,7 @@
                 <tr>
                   <th class="th-sub-id">#</th><th class="th-sub-title">Title</th><th class="th-sub-lecturer">Lecturer</th>
                   <th class="th-sub-year">Year</th><th class="th-sub-publication">Publication</th>
+                  <th class="th-sub-link">Paper Link</th>
                   <th class="th-sub-approval">Approval</th><th class="th-sub-comment">Admin Comment</th>
                   <th class="th-sub-actions">Actions</th>
                 </tr>
@@ -111,6 +112,10 @@
                   <td>{{ sub.lecturer?.lecturername || 'N/A' }}</td>
                   <td>{{ sub.year }}</td>
                   <td>{{ sub.publication }}</td>
+                  <td class="text-start">
+                      <a v-if="sub.paper_link" :href="sub.paper_link" target="_blank" class="text-primary">{{sub.paper_link}}</a>
+                      <span v-else>—</span>
+                  </td>
                   <td>
                     <span :class="['badge', sub.approval_status==='pending'?'bg-warning': sub.approval_status==='approved'?'bg-success':'bg-danger']">
                       {{ sub.approval_status }}

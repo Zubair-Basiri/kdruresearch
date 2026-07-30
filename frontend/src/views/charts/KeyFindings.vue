@@ -153,6 +153,85 @@
         <span class="p-info">Page {{ page }} of {{ totalPages }}</span>
         <button class="p-btn" @click="page++" :disabled="page === totalPages">Next →</button>
       </div>
+      <!-- Summary Boxes -->
+      <div v-if="filteredData.length" class="summary-boxes">
+        <h4 class="summary-title">Summary per Column</h4>
+        <div class="summary-grid">
+          <div v-for="summary in columnSummaries" :key="summary.label" class="summary-card">
+            <span class="summary-label">{{ summary.label }}</span>
+            <span class="summary-value">{{ summary.count }}</span>
+            <span class="summary-total">/ {{ summary.total }} records</span>
+          </div>
+        </div>
+      </div>
+      <div v-if="gradeBreakdown.length" class="grade-breakdown">
+        <h4 class="summary-title">Grade Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in gradeBreakdown" :key="item.grade" class="summary-card">
+            <span class="summary-label">{{ item.grade }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
+          </div>
+        </div>
+      </div>
+      <!-- Education Breakdown -->
+      <div v-if="educationBreakdown.length" class="education-breakdown">
+        <h4 class="summary-title">Education Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in educationBreakdown" :key="item.education" class="summary-card">
+            <span class="summary-label">{{ item.education }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
+          </div>
+        </div>
+      </div>
+      <!-- Publication Type Breakdown -->
+      <div v-if="publicationTypeBreakdown.length" class="breakdown-section">
+        <h4 class="summary-title">Publication Type Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in publicationTypeBreakdown" :key="item.type" class="summary-card">
+            <span class="summary-label">{{ item.type }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Index Breakdown -->
+      <div v-if="indexBreakdown.length" class="breakdown-section">
+        <h4 class="summary-title">Index Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in indexBreakdown" :key="item.index" class="summary-card">
+            <span class="summary-label">{{ item.index }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Language Breakdown -->
+      <div v-if="languageBreakdown.length" class="breakdown-section">
+        <h4 class="summary-title">Language Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in languageBreakdown" :key="item.language" class="summary-card">
+            <span class="summary-label">{{ item.language }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collaboration Breakdown -->
+      <div v-if="collaborationBreakdown.length" class="breakdown-section">
+        <h4 class="summary-title">Collaboration Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in collaborationBreakdown" :key="item.collaboration" class="summary-card">
+            <span class="summary-label">{{ item.collaboration }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
+          </div>
+        </div>
+      </div>
     </div>
     <div v-else class="no-data">No records match the selected filters.</div>
   </div>
@@ -320,6 +399,124 @@ function resetFilters() {
   filteredData.value = []
   page.value = 1
 }
+
+// Add this inside <script setup>, after displayColumns
+  const columnSummaries = computed(() => {
+    if (!filteredData.value.length) return [];
+    const cols = displayColumns.value;
+    return cols.map(col => {
+      const key = col.key;
+      // Collect distinct non‑null values
+      const distinct = new Set();
+      filteredData.value.forEach(row => {
+        const val = row[key];
+        if (val !== null && val !== undefined && val !== '' && val !== '—') {
+          distinct.add(val);
+        }
+      });
+      return {
+        label: col.label,
+        count: distinct.size,
+        total: filteredData.value.length,
+      };
+    });
+  });
+
+  const gradeBreakdown = computed(() => {
+    if (!filteredData.value.length) return [];
+    const counts = {};
+    filteredData.value.forEach(row => {
+      const grade = row.grade;
+      if (grade && grade !== '' && grade !== '—' && grade !== null && grade !== undefined) {
+        counts[grade] = (counts[grade] || 0) + 1;
+      }
+    });
+    return Object.entries(counts).map(([grade, count]) => ({
+      grade,
+      count,
+      total: filteredData.value.length,
+    }));
+  });
+
+  const educationBreakdown = computed(() => {
+    if (!filteredData.value.length) return [];
+    const counts = {};
+    filteredData.value.forEach(row => {
+      const edu = row.education;
+      if (edu && edu !== '' && edu !== '—' && edu !== null && edu !== undefined) {
+        counts[edu] = (counts[edu] || 0) + 1;
+      }
+    });
+    return Object.entries(counts).map(([edu, count]) => ({
+      education: edu,
+      count,
+      total: filteredData.value.length,
+    }));
+  });
+
+  const publicationTypeBreakdown = computed(() => {
+  if (!filteredData.value.length) return [];
+  const counts = {};
+  filteredData.value.forEach(row => {
+    const val = row.publication_type;
+    if (val && val !== '' && val !== '—' && val !== null && val !== undefined) {
+      counts[val] = (counts[val] || 0) + 1;
+    }
+  });
+  return Object.entries(counts).map(([type, count]) => ({
+    type,
+    count,
+    total: filteredData.value.length,
+  }));
+});
+
+const indexBreakdown = computed(() => {
+  if (!filteredData.value.length) return [];
+  const counts = {};
+  filteredData.value.forEach(row => {
+    const val = row.index;
+    if (val && val !== '' && val !== '—' && val !== null && val !== undefined) {
+      counts[val] = (counts[val] || 0) + 1;
+    }
+  });
+  return Object.entries(counts).map(([idx, count]) => ({
+    index: idx,
+    count,
+    total: filteredData.value.length,
+  }));
+});
+
+const languageBreakdown = computed(() => {
+  if (!filteredData.value.length) return [];
+  const counts = {};
+  filteredData.value.forEach(row => {
+    const val = row.language;
+    if (val && val !== '' && val !== '—' && val !== null && val !== undefined) {
+      counts[val] = (counts[val] || 0) + 1;
+    }
+  });
+  return Object.entries(counts).map(([lang, count]) => ({
+    language: lang,
+    count,
+    total: filteredData.value.length,
+  }));
+});
+
+const collaborationBreakdown = computed(() => {
+  if (!filteredData.value.length) return [];
+  const counts = {};
+  filteredData.value.forEach(row => {
+    const val = row.collaboration;
+    if (val && val !== '' && val !== '—' && val !== null && val !== undefined) {
+      counts[val] = (counts[val] || 0) + 1;
+    }
+  });
+  return Object.entries(counts).map(([collab, count]) => ({
+    collaboration: collab,
+    count,
+    total: filteredData.value.length,
+  }));
+});
 
 //Export method
 async function exportPdf() {
@@ -654,5 +851,54 @@ async function exportPdf() {
 .researcher-input:focus {
   outline: none;
   border-color: #c49a6c;
+}
+
+.summary-boxes {
+  margin-top: 30px;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 20, 30, 0.08);
+  border: 1px solid #e8dccc;
+}
+.summary-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2c3e4f;
+  margin-bottom: 16px;
+  border-left: 4px solid #c49a6c;
+  padding-left: 12px;
+  margin-top: 18px;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.summary-card {
+  background: #faf7f2;
+  padding: 12px 16px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid #e8dccc;
+}
+.summary-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #5d707f;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e4f;
+  margin: 4px 0;
+}
+.summary-total {
+  font-size: 12px;
+  color: #7a8b99;
 }
 </style>

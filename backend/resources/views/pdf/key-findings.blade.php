@@ -5,7 +5,7 @@
     <style>
         @page { margin: 1cm; }
         body {
-            font-family: 'bahij', 'Times New Roman', serif;
+            font-family: 'bahij_nazanin', 'dejavusans', 'Times New Roman', serif;
             color: #1F4E79;
             background-color: #fff;
             margin: 0;
@@ -150,6 +150,52 @@
         @endforelse
     </tbody>
 </table>
+
+    <!-- ===== BREAKDOWN SECTIONS ===== -->
+<!-- ===== BREAKDOWN SECTIONS ===== -->
+
+<!-- Helper to render a breakdown as a grid of small boxes -->
+@php
+    function renderBreakdown($items, $labelKey, $title, $recordCount)
+    {
+        if (empty($items)) return '';
+
+        $html = '<div style="margin-top: 20px; padding: 12px 16px; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden;">';
+        $html .= '<h4 style="font-size: 13px; font-weight: 700; color: #1F4E79; margin: 0 0 10px 0; border-left: 3px solid #1F4E79; padding-left: 10px; text-align: left;">' . $title . '</h4>';
+        $html .= '<div style="overflow: hidden;">'; // clearfix
+
+        $count = 0;
+        $totalItems = count($items);
+        foreach ($items as $item) {
+            $label = $item[$labelKey] ?? '';
+            $countVal = $item['count'] ?? 0;
+            $total = $item['total'] ?? $recordCount;
+
+            // Remove right margin on the last item of each row (every 5th item or the very last)
+            $marginRight = ($count % 5 == 4 || $count == $totalItems - 1) ? '0' : '2%';
+
+            $html .= '<div style="float: left; width: 18%; margin-right: ' . $marginRight . '; margin-bottom: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 6px; text-align: center;">';
+            $html .= '<div style="font-size: 8px; text-transform: uppercase; color: #4a5568; letter-spacing: 0.3px;">' . htmlspecialchars($label) . '</div>';
+            $html .= '<div style="font-size: 16px; font-weight: 700; color: #1F4E79; margin: 2px 0;">' . $countVal . '</div>';
+            $html .= '<div style="font-size: 8px; color: #718096;">/ ' . $total . ' records</div>';
+            $html .= '</div>';
+
+            $count++;
+        }
+
+        $html .= '</div>'; // end clearfix
+        $html .= '</div>'; // end card
+        return $html;
+    }
+@endphp
+
+{!! renderBreakdown($columnSummaries, 'label', 'Unique Values per Column', $totalRecords) !!}
+{!! renderBreakdown($gradeBreakdown, 'grade', 'Grade Breakdown', $totalRecords) !!}
+{!! renderBreakdown($educationBreakdown, 'education', 'Education Breakdown', $totalRecords) !!}
+{!! renderBreakdown($publicationTypeBreakdown, 'type', 'Publication Type Breakdown', $totalRecords) !!}
+{!! renderBreakdown($indexBreakdown, 'index', 'Index Breakdown', $totalRecords) !!}
+{!! renderBreakdown($languageBreakdown, 'language', 'Language Breakdown', $totalRecords) !!}
+{!! renderBreakdown($collaborationBreakdown, 'collaboration', 'Collaboration Breakdown', $totalRecords) !!}
 
 <div class="footer">
     <div class="signature-block">

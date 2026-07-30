@@ -230,13 +230,135 @@ class KeyFindingsController extends Controller
             $filtersSummary[] = "Researcher: " . $request->researcher_name;
         }
 
+        // Column summaries (unique counts per selected column)
+        $columnSummaries = [];
+        foreach (array_keys($columns) as $colKey) {
+            $values = array_column($data, $colKey);
+            // Filter out empty/null/—
+            $filtered = array_filter($values, fn($v) => $v !== null && $v !== '' && $v !== '—');
+            $unique = count(array_unique($filtered));
+            $columnSummaries[] = [
+                'label' => $allColumns[$colKey],
+                'count' => $unique,
+                'total' => count($data),
+            ];
+        }
+
+        // Grade breakdown
+        $gradeCounts = [];
+        foreach ($data as $row) {
+            $grade = $row['grade'] ?? null;
+            if ($grade && $grade !== '' && $grade !== '—') {
+                $gradeCounts[$grade] = ($gradeCounts[$grade] ?? 0) + 1;
+            }
+        }
+        $gradeBreakdown = [];
+        foreach ($gradeCounts as $grade => $count) {
+            $gradeBreakdown[] = [
+                'grade' => $grade,
+                'count' => $count,
+                'total' => count($data),
+            ];
+        }
+
+        // Education breakdown (qualification)
+        $eduCounts = [];
+        foreach ($data as $row) {
+            $edu = $row['education'] ?? null;
+            if ($edu && $edu !== '' && $edu !== '—') {
+                $eduCounts[$edu] = ($eduCounts[$edu] ?? 0) + 1;
+            }
+        }
+        $educationBreakdown = [];
+        foreach ($eduCounts as $edu => $count) {
+            $educationBreakdown[] = [
+                'education' => $edu,
+                'count' => $count,
+                'total' => count($data),
+            ];
+        }
+        // Publication Type breakdown
+        $pubTypeCounts = [];
+        foreach ($data as $row) {
+            $pub = $row['publication_type'] ?? null;
+            if ($pub && $pub !== '' && $pub !== '—') {
+                $pubTypeCounts[$pub] = ($pubTypeCounts[$pub] ?? 0) + 1;
+            }
+        }
+        $publicationTypeBreakdown = [];
+        foreach ($pubTypeCounts as $type => $count) {
+            $publicationTypeBreakdown[] = [
+                'type' => $type,
+                'count' => $count,
+                'total' => count($data),
+            ];
+        }
+
+        // Index breakdown
+        $indexCounts = [];
+        foreach ($data as $row) {
+            $idx = $row['index'] ?? null;
+            if ($idx && $idx !== '' && $idx !== '—') {
+                $indexCounts[$idx] = ($indexCounts[$idx] ?? 0) + 1;
+            }
+        }
+        $indexBreakdown = [];
+        foreach ($indexCounts as $index => $count) {
+            $indexBreakdown[] = [
+                'index' => $index,
+                'count' => $count,
+                'total' => count($data),
+            ];
+        }
+
+        // Language breakdown
+        $langCounts = [];
+        foreach ($data as $row) {
+            $lang = $row['language'] ?? null;
+            if ($lang && $lang !== '' && $lang !== '—') {
+                $langCounts[$lang] = ($langCounts[$lang] ?? 0) + 1;
+            }
+        }
+        $languageBreakdown = [];
+        foreach ($langCounts as $lang => $count) {
+            $languageBreakdown[] = [
+                'language' => $lang,
+                'count' => $count,
+                'total' => count($data),
+            ];
+        }
+
+        // Collaboration breakdown
+        $collabCounts = [];
+        foreach ($data as $row) {
+            $collab = $row['collaboration'] ?? null;
+            if ($collab && $collab !== '' && $collab !== '—') {
+                $collabCounts[$collab] = ($collabCounts[$collab] ?? 0) + 1;
+            }
+        }
+        $collaborationBreakdown = [];
+        foreach ($collabCounts as $collab => $count) {
+            $collaborationBreakdown[] = [
+                'collaboration' => $collab,
+                'count' => $count,
+                'total' => count($data),
+            ];
+        }
+
         // Render view
         $html = view('pdf.key-findings', [
-            'columns'       => array_values($columns),
-            'rows'          => $rows,
-            'date'          => $pashtoDate,
-            'filterSummary' => implode(' | ', $filtersSummary),
-            'totalRecords'  => count($data),
+            'columns'            => array_values($columns),
+            'rows'               => $rows,
+            'date'               => $pashtoDate,
+            'filterSummary'      => implode(' | ', $filtersSummary),
+            'totalRecords'       => count($data),
+            'columnSummaries'    => $columnSummaries,
+            'gradeBreakdown'     => $gradeBreakdown,
+            'educationBreakdown' => $educationBreakdown,
+            'publicationTypeBreakdown' => $publicationTypeBreakdown,
+            'indexBreakdown'           => $indexBreakdown,
+            'languageBreakdown'        => $languageBreakdown,
+            'collaborationBreakdown'   => $collaborationBreakdown,
         ])->render();
 
         // mPDF configuration

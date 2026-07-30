@@ -25,6 +25,7 @@
                         <option value="user">Regular User (Lecturer)</option>
                         <option value="admin">Admin</option>
                         <option value="super_admin">Super Admin</option>
+                        <option value="lecturer_profile_admin">Lecturer Profile Admin</option>
                       </select>
                     </div>
                   </div>

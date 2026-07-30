@@ -70,6 +70,7 @@ class SubmittedPaperController extends Controller
             'language' => 'nullable|string',
             'author_position' => 'nullable|string',
             'status' => 'nullable|string|in:Published,Proposal Stage,Ongoing Research',
+            'paper_link' => 'nullable|url|max:2000',
         ]);
 
         $submission = SubmittedPaper::create([
@@ -108,6 +109,7 @@ class SubmittedPaperController extends Controller
             'language' => 'nullable|string',
             'author_position' => 'nullable|string',
             'status' => 'nullable|string|in:Published,Proposal Stage,Ongoing Research',
+            'paper_link' => 'nullable|url|max:2000',
         ]);
 
         $submittedPaper->update($validated);

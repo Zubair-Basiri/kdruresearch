@@ -80,6 +80,48 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;          /* Full viewport height */
+  min-height: 100vh;
+  overflow: hidden;       /* Prevent the whole sidebar from scrolling */
+}
+
+/* Sidebar header: fixed height */
+.sidebar-header {
+  flex-shrink: 0;         /* Don't shrink */
+  height: 70px;           /* Adjust to your header height */
+  /* … your existing header styles … */
+}
+
+/* Sidebar body: takes remaining height and scrolls */
+.sidebar-body {
+  flex: 1 1 auto;         /* Grow to fill remaining space */
+  overflow-y: auto;       /* Enable vertical scrolling */
+  overscroll-behavior: contain; /* Prevent scroll chaining */
+  scrollbar-width: thin;  /* Firefox scrollbar width */
+}
+
+/* Webkit scrollbar styling */
+.sidebar-body::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+.sidebar-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Sidebar footer: optional, fixed at bottom */
+.sidebar-footer {
+  flex-shrink: 0;
+  height: 40px;           /* If you have footer content */
+}
+
+/* Mobile offcanvas (if used) */
 @media (max-width: 767px) {
   .mobile-sidebar {
     width: 80% !important;

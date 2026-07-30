@@ -47,7 +47,7 @@ class AuthController extends Controller
             'name'        => 'required|string|max:255',
             'email'       => 'required|email|unique:users',
             'password'    => 'required|string|min:8|confirmed',
-            'role'        => 'required|in:user,admin,super_admin',
+            'role'        => 'required|in:user,admin,super_admin,lecturer_profile_admin',
             'lecturer_id' => 'nullable|exists:lecturers,id',  // new
         ]);
 

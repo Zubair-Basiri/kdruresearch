@@ -28,7 +28,7 @@
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="mb-2 navbar-nav ms-auto align-items-center navbar-list mb-lg-0">
-          <li class="me-0 me-xl-2" v-if="isGoPro">
+          <!-- <li class="me-0 me-xl-2" v-if="isGoPro">
             <a
               class="btn btn-primary btn-sm d-flex gap-2 align-items-center"
               href="http://hopeui.iqonic.design/pro?utm_source=hopeui-free-demo&utm_medium=hopeui-free-demo&utm_campaign=hopeui-pro-launch"
@@ -37,7 +37,7 @@
               <icon-component type="outlined" :size="16" icon-name="location-arrow"></icon-component>
               Go Pro
             </a>
-          </li>
+          </li> -->
           <li class="nav-item dropdown">
             <a
               class="nav-link py-0 d-flex align-items-center"

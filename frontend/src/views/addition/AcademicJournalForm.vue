@@ -161,6 +161,12 @@
                     <option value="International">International</option>
                   </select>
                 </div>
+                <div class="col-md-4" v-if="form.collaboration === 'International'">
+                    <label class="form-label form-title">International Paper Link</label>
+                    <input v-model="form.paper_link" class="form-control form-field" placeholder="https://doi.org/..." />
+                    <small class="text-muted">Provide a link to the international paper.</small>
+                    <div v-if="errors.paper_link" class="text-danger small mt-1">{{ errors.paper_link[0] }}</div>
+                </div>
                 <div class="col-md-4">
                   <label class="form-label form-title">Language</label>
                   <select v-model="form.language" class="form-select form-field">
@@ -244,6 +250,7 @@ const form = reactive({
   citation: '',
   funding: '',
   collaboration: '',
+  paper_link: '',
   language: '',
   status: '',
   author_position: ''
