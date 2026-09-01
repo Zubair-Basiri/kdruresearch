@@ -46,30 +46,31 @@ class YearSummaryController extends Controller
     {
         $metric = $request->metric;
         $years = $this->getYearRange($request);
+        $universityId = currentUniversityId();
 
         switch ($metric) {
             case "Faculty / Year":
-                return $this->groupByFaculty($years);
+                return $this->groupByFaculty($years, $universityId);
             case "Department / Year":
-                return $this->groupByDepartment($years);
+                return $this->groupByDepartment($years, $universityId);
             case "Academic Grade / Year":
-                return $this->groupByLecturerField('grade', $years);
+                return $this->groupByLecturerField('grade', $years, $universityId);
             case "Researcher / Year":
-                return $this->groupByResearcher($years);
+                return $this->groupByResearcher($years, $universityId);
             case "publication Type / Year":
-                return $this->groupByPaperField('publication', $years);
+                return $this->groupByPaperField('publication', $years, $universityId);
             case "Funding Source / Year":
-                return $this->groupByPaperField('funding', $years);
+                return $this->groupByPaperField('funding', $years, $universityId);
             case "Collaboration / Year":
-                return $this->groupByPaperField('collaboration', $years);
+                return $this->groupByPaperField('collaboration', $years, $universityId);
             case "Publication Language / Year":
-                return $this->groupByPaperField('language', $years);
+                return $this->groupByPaperField('language', $years, $universityId);
             case "Index / Year":
-                return $this->groupByPaperField('indexed', $years);
+                return $this->groupByPaperField('indexed', $years, $universityId);
             case "Qualification / Year":
-                return $this->groupByLecturerField('qualification', $years);
+                return $this->groupByLecturerField('qualification', $years, $universityId);
             case "Status / Year":
-                return $this->groupByPaperField('status', $years);
+                return $this->groupByPaperField('status', $years, $universityId);
             default:
                 return response()->json([]);
         }
@@ -85,28 +86,29 @@ class YearSummaryController extends Controller
     {
         $type = $request->category;
         $years = $this->lastFiveYears;
+        $universityId = currentUniversityId();
 
         switch ($type) {
             case "Faculties":
-                return $this->categoryByFaculty($years);
+                return $this->categoryByFaculty($years, $universityId);
             case "Departments":
-                return $this->categoryByDepartment($years);
+                return $this->categoryByDepartment($years, $universityId);
             case "Academic Grades":
-                return $this->categoryByLecturerField('grade', $years);
+                return $this->categoryByLecturerField('grade', $years, $universityId);
             case "Academic Qualification":
-                return $this->categoryByLecturerField('qualification', $years);
+                return $this->categoryByLecturerField('qualification', $years, $universityId);
             case "Publication Types":
-                return $this->categoryByPaperField('publication', $years);
+                return $this->categoryByPaperField('publication', $years, $universityId);
             case "Funding Sources":
-                return $this->categoryByPaperField('funding', $years);
+                return $this->categoryByPaperField('funding', $years, $universityId);
             case "Indexed":
-                return $this->categoryByIndexType($years);
+                return $this->categoryByIndexType($years, $universityId);
             case "Collaboration":
-                return $this->categoryByPaperField('collaboration', $years);
+                return $this->categoryByPaperField('collaboration', $years, $universityId);
             case "Status":
-                return $this->categoryByPaperField('status', $years);
+                return $this->categoryByPaperField('status', $years, $universityId);
             case "Publication Language":
-                return $this->categoryByPaperField('language', $years);
+                return $this->categoryByPaperField('language', $years, $universityId);
             default:
                 return response()->json([]);
         }
@@ -116,10 +118,15 @@ class YearSummaryController extends Controller
     // CATEGORY METHODS (now accept $years)
     // ------------------------------------------------------------------------
 
-    private function categoryByIndexType($years)
+    private function categoryByIndexType($years, $universityId)
     {
         $values = AcademicPaper::whereNotNull('indexed')
             ->where('indexed', '!=', '')
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
+            })
             ->distinct()
             ->pluck('indexed');
 
@@ -129,67 +136,79 @@ class YearSummaryController extends Controller
             foreach ($years as $year) {
                 $count = AcademicPaper::where('year', $year)
                     ->where('indexed', $value)
+                    ->when($universityId, function ($q) use ($universityId) {
+                        return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                            $sq->where('university_id', $universityId);
+                        });
+                    })
                     ->count();
                 $yearData[$year] = $count;
             }
             $average = array_sum($yearData) / count($years);
-            $result[] = [
-                'label'   => $value,
-                'values'  => $yearData,
-                'average' => $average
-            ];
+            $result[] = ['label' => $value, 'values' => $yearData, 'average' => $average];
         }
         return response()->json($result);
     }
 
-    private function categoryByDepartment($years)
+    private function categoryByDepartment($years, $universityId)
     {
-        $departments = Department::all();
+        $departments = Department::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->get();
+
         $result = [];
         foreach ($departments as $dept) {
             $values = [];
             foreach ($years as $year) {
                 $count = AcademicPaper::where('year', $year)
                     ->whereHas('lecturer', fn($q) => $q->where('department_id', $dept->id))
+                    ->when($universityId, function ($q) use ($universityId) {
+                        return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                            $sq->where('university_id', $universityId);
+                        });
+                    })
                     ->count();
                 $values[$year] = $count;
             }
             $average = array_sum($values) / count($years);
-            $result[] = [
-                'label'   => $dept->deptname,
-                'values'  => $values,
-                'average' => $average
-            ];
+            $result[] = ['label' => $dept->deptname, 'values' => $values, 'average' => $average];
         }
         return response()->json($result);
     }
 
-    private function categoryByFaculty($years)
+    private function categoryByFaculty($years, $universityId)
     {
-        $faculties = Faculty::all();
+        $faculties = Faculty::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->get();
+
         $result = [];
         foreach ($faculties as $faculty) {
             $values = [];
             foreach ($years as $year) {
                 $count = AcademicPaper::where('year', $year)
                     ->whereHas('lecturer', fn($q) => $q->where('faculty_id', $faculty->id))
+                    ->when($universityId, function ($q) use ($universityId) {
+                        return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                            $sq->where('university_id', $universityId);
+                        });
+                    })
                     ->count();
                 $values[$year] = $count;
             }
             $average = array_sum($values) / count($years);
-            $result[] = [
-                'label'   => $faculty->facultyname,
-                'values'  => $values,
-                'average' => $average
-            ];
+            $result[] = ['label' => $faculty->facultyname, 'values' => $values, 'average' => $average];
         }
         return response()->json($result);
     }
 
-    private function categoryByLecturerField($field, $years)
+    private function categoryByLecturerField($field, $years, $universityId)
     {
         $values = Lecturer::whereNotNull($field)
             ->where($field, '!=', '')
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->where('university_id', $universityId);
+            })
             ->distinct()
             ->pluck($field);
 
@@ -199,23 +218,29 @@ class YearSummaryController extends Controller
             foreach ($years as $year) {
                 $count = AcademicPaper::where('year', $year)
                     ->whereHas('lecturer', fn($q) => $q->where($field, $value))
+                    ->when($universityId, function ($q) use ($universityId) {
+                        return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                            $sq->where('university_id', $universityId);
+                        });
+                    })
                     ->count();
                 $yearData[$year] = $count;
             }
             $average = array_sum($yearData) / count($years);
-            $result[] = [
-                'label'   => $value,
-                'values'  => $yearData,
-                'average' => $average
-            ];
+            $result[] = ['label' => $value, 'values' => $yearData, 'average' => $average];
         }
         return response()->json($result);
     }
 
-    private function categoryByPaperField($field, $years)
+    private function categoryByPaperField($field, $years, $universityId)
     {
         $values = AcademicPaper::whereNotNull($field)
             ->where($field, '!=', '')
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
+            })
             ->distinct()
             ->pluck($field);
 
@@ -225,15 +250,16 @@ class YearSummaryController extends Controller
             foreach ($years as $year) {
                 $count = AcademicPaper::where('year', $year)
                     ->where($field, $value)
+                    ->when($universityId, function ($q) use ($universityId) {
+                        return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                            $sq->where('university_id', $universityId);
+                        });
+                    })
                     ->count();
                 $yearData[$year] = $count;
             }
             $average = array_sum($yearData) / count($years);
-            $result[] = [
-                'label'   => $value,
-                'values'  => $yearData,
-                'average' => $average
-            ];
+            $result[] = ['label' => $value, 'values' => $yearData, 'average' => $average];
         }
         return response()->json($result);
     }
@@ -242,41 +268,56 @@ class YearSummaryController extends Controller
     // GROUPING METHODS (now accept $years)
     // ------------------------------------------------------------------------
 
-    private function groupByFaculty($years)
+    private function groupByFaculty($years, $universityId)
     {
-        $faculties = Faculty::all();
-        return $this->buildYearResponse($faculties, 'faculty_id', 'facultyname', $years);
+        $faculties = Faculty::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->get();
+        return $this->buildYearResponse($faculties, 'faculty_id', 'facultyname', $years, $universityId);
     }
 
-    private function groupByDepartment($years)
+    private function groupByDepartment($years, $universityId)
     {
-        $departments = Department::all();
-        return $this->buildYearResponse($departments, 'department_id', 'deptname', $years);
+        $departments = Department::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->get();
+        return $this->buildYearResponse($departments, 'department_id', 'deptname', $years, $universityId);
     }
 
-    private function groupByResearcher($years)
+    private function groupByResearcher($years, $universityId)
     {
-        $lecturers = Lecturer::all();
-        return $this->buildYearResponse($lecturers, 'lecturer_id', 'lecturername', $years);
+        $lecturers = Lecturer::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->get();
+        return $this->buildYearResponse($lecturers, 'lecturer_id', 'lecturername', $years, $universityId);
     }
 
-    private function groupByLecturerField($field, $years)
+    private function groupByLecturerField($field, $years, $universityId)
     {
-        $values = Lecturer::select($field)->distinct()->pluck($field);
-        return $this->buildCustomFieldResponse($values, $field, true, $years);
+        $values = Lecturer::select($field)
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->where('university_id', $universityId);
+            })
+            ->distinct()
+            ->pluck($field);
+        return $this->buildCustomFieldResponse($values, $field, true, $years, $universityId);
     }
 
-    private function groupByPaperField($field, $years)
+    private function groupByPaperField($field, $years, $universityId)
     {
-        $values = AcademicPaper::select($field)->distinct()->pluck($field);
-        return $this->buildCustomFieldResponse($values, $field, false, $years);
+        $values = AcademicPaper::select($field)
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
+            })
+            ->distinct()
+            ->pluck($field);
+        return $this->buildCustomFieldResponse($values, $field, false, $years, $universityId);
     }
 
-    // ------------------------------------------------------------------------
-    // CORE BUILDERS (now accept $years)
-    // ------------------------------------------------------------------------
-
-    private function buildYearResponse($collection, $foreignKey, $labelField, $years)
+    // ---- Core builders with university filter ----
+    private function buildYearResponse($collection, $foreignKey, $labelField, $years, $universityId)
     {
         $result = [];
         foreach ($collection as $item) {
@@ -293,6 +334,11 @@ class YearSummaryController extends Controller
                 } else {
                     $query->where($foreignKey, $item->id);
                 }
+                if ($universityId) {
+                    $query->whereHas('lecturer.faculty', function ($q) use ($universityId) {
+                        $q->where('university_id', $universityId);
+                    });
+                }
                 $count = $query->count();
                 $citation = $query->sum('citation');
 
@@ -305,7 +351,7 @@ class YearSummaryController extends Controller
         return response()->json($result);
     }
 
-    private function buildCustomFieldResponse($values, $field, $fromLecturer, $years)
+    private function buildCustomFieldResponse($values, $field, $fromLecturer, $years, $universityId)
     {
         $result = [];
         foreach ($values as $value) {
@@ -321,6 +367,11 @@ class YearSummaryController extends Controller
                     $query->whereHas('lecturer', fn($q) => $q->where($field, $value));
                 } else {
                     $query->where($field, $value);
+                }
+                if ($universityId) {
+                    $query->whereHas('lecturer.faculty', function ($q) use ($universityId) {
+                        $q->where('university_id', $universityId);
+                    });
                 }
                 $count = $query->count();
                 $citation = $query->sum('citation');

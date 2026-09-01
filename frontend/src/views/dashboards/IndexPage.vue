@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard">
-    <!-- LEFT FILTER PANEL – v-once removed -->
+    <!-- LEFT FILTER PANEL -->
     <aside class="filter-panel">
       <h3>Filters</h3>
       <div v-if="filtersLoading" class="filter-loading">Loading filters...</div>
@@ -8,13 +8,49 @@
       <template v-else>
         <div class="filter-group">
           <label>Faculty</label>
-          <select v-model="filters.faculty_id" class="compact-select">
+
+          <!-- ========== MINISTRY AUTHORITY: Searchable Multiselect ========== -->
+          <template v-if="authStore.isMinistryAuthority">
+            <Multiselect
+              v-model="selectedFaculty"
+              :options="facultyOptions"
+              :searchable="true"
+              :allow-empty="false"
+              :show-labels="false"
+              :close-on-select="true"
+              :clear-on-select="false"
+              :preserve-search="true"
+              placeholder="All Faculties"
+              label="label"
+              track-by="id"
+              :max-height="200"
+              :options-limit="50"
+              :internal-search="true"
+              class="faculty-multiselect"
+              @select="onFacultySelect"
+            >
+              <template #singleLabel="{ option }">
+                <span>{{ option.label }}</span>
+              </template>
+              <template #option="{ option }">
+                <span>{{ option.label }}</span>
+              </template>
+            </Multiselect>
+          </template>
+
+          <!-- ========== ALL OTHER ROLES: Native select ========== -->
+          <select v-else v-model="filters.faculty_id" class="compact-select">
             <option value="">All Faculties</option>
-            <option v-for="f in faculties" :key="f.id" :value="f.id">
+            <option
+              v-for="f in faculties"
+              :key="f.id"
+              :value="f.id"
+            >
               {{ f.facultyname }}
             </option>
           </select>
         </div>
+
         <div class="filter-group">
           <label>Year</label>
           <select v-model="filters.year" class="compact-select">
@@ -39,7 +75,7 @@
         />
       </div>
 
-      <!-- ALL CHARTS (vertical grouped bars) -->
+      <!-- ALL CHARTS -->
       <div class="charts-grid">
         <ChartCard
           v-for="metric in chartMetrics"
@@ -65,8 +101,12 @@
 <script setup>
 import { ref, computed, onMounted, shallowRef } from 'vue'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+import Multiselect from 'vue-multiselect'
 import KpiMiniCard from '@/components/facultyCards/KpiMiniCard.vue'
 import ChartCard from '@/components/facultyCards/ChartCard.vue'
+
+const authStore = useAuthStore()
 
 // Simple debounce
 const debounce = (fn, delay) => {
@@ -83,8 +123,12 @@ const faculties = ref([])
 const years = ref([])
 const dashboardData = shallowRef(null)
 const loading = ref(false)
-const filtersLoading = ref(true)        // separate loading for filters
+const filtersLoading = ref(true)
 const filtersError = ref(null)
+
+// ===== MULTISELECT STATE (ministry_authority only) =====
+const selectedFaculty = ref(null)
+const facultyOptions = ref([])
 
 // ===== ACADEMIC COLOR PALETTE =====
 const kpiColors = {
@@ -114,7 +158,7 @@ const kpiColors = {
   total_research_reports: '#3498db'
 }
 
-// ===== LIST OF ALL METRICS =====
+// ===== LIST OF METRICS =====
 const chartMetrics = [
   { key: 'publications', label: 'Publications per Faculty' },
   { key: 'funding', label: 'Funding per Faculty' },
@@ -149,6 +193,21 @@ const fetchFilters = async () => {
     const { data } = await api.get('/dashboard/filters')
     faculties.value = data.faculties || []
     years.value = data.years || []
+
+    // Build faculty options for Multiselect (ministry_authority only)
+    if (authStore.isMinistryAuthority) {
+      const options = [
+        { id: '', label: 'All Faculties' },
+        ...faculties.value.map(f => ({
+          id: f.id,
+          label: `${f.facultyname} — ${f.university_name || ''}`
+        }))
+      ]
+      facultyOptions.value = options
+
+      // Set default selection to "All Faculties"
+      selectedFaculty.value = options[0]
+    }
   } catch (error) {
     console.error('Failed to load filters', error)
     filtersError.value = 'Could not load filters. Please refresh.'
@@ -175,20 +234,22 @@ const fetchDashboardData = async () => {
   }
 }
 
-onMounted(() => {
-  fetchFilters()
-  fetchDashboardData()
-})
-
-// Debounced apply
+// ===== DEBOUNCED APPLY =====
 const applyFilter = debounce(() => {
   fetchDashboardData()
 }, 300)
 
-// Computed KPIs
+// ===== MULTISELECT HANDLER (ministry_authority) =====
+const onFacultySelect = (faculty) => {
+  // Update the filter value without triggering any API call
+  filters.value.faculty_id = faculty.id || ''
+  // Do NOT call fetchDashboardData() – wait for Apply button
+}
+
+// ===== COMPUTED KPIS =====
 const kpis = computed(() => dashboardData.value?.kpis || {})
 
-// Formatters
+// ===== FORMATTERS =====
 const formatLabel = (key) => {
   return key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
 }
@@ -199,7 +260,7 @@ const formatValue = (key, value) => {
   return value.toLocaleString()
 }
 
-// Chart helpers
+// ===== CHART HELPERS =====
 const chartData = computed(() => dashboardData.value?.chart_data || {})
 
 const getChartSeries = (metricKey) => {
@@ -210,7 +271,7 @@ const getChartCategories = (metricKey) => {
   return chartData.value[metricKey]?.categories || []
 }
 
-// Base chart options (static)
+// ===== BASE CHART OPTIONS =====
 const baseChartOptions = {
   chart: { toolbar: { show: false } },
   colors: ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22'],
@@ -224,7 +285,6 @@ const baseChartOptions = {
   yaxis: { title: { text: 'Count' } }
 }
 
-// Cache chart options
 const getChartOptions = (metricKey) => ({
   ...baseChartOptions,
   xaxis: {
@@ -232,7 +292,22 @@ const getChartOptions = (metricKey) => ({
     categories: getChartCategories(metricKey)
   }
 })
+
+// ===== ON MOUNT =====
+onMounted(async () => {
+  await fetchFilters()
+
+  // For ministry_authority, default to "All Faculties" (empty filter)
+  if (authStore.isMinistryAuthority) {
+    filters.value.faculty_id = ''
+    // selectedFaculty already set in fetchFilters
+  }
+
+  await fetchDashboardData()
+})
 </script>
+
+<style src="vue-multiselect/dist/vue-multiselect.css"></style>
 
 <style scoped>
 .dashboard {
@@ -253,6 +328,7 @@ const getChartOptions = (metricKey) => ({
   top: 20px;
   max-height: 400px;
   overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 .filter-panel h3 {
@@ -294,6 +370,8 @@ const getChartOptions = (metricKey) => ({
   border: 1px solid #d0d7de;
   padding: 0 8px;
   background: white;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .apply-btn {
@@ -326,7 +404,6 @@ const getChartOptions = (metricKey) => ({
 }
 
 .charts-grid {
-  /* display: grid; */
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
 }
@@ -352,6 +429,68 @@ const getChartOptions = (metricKey) => ({
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ===== MULTISELECT CUSTOMIZATION (matches .compact-select) ===== */
+.faculty-multiselect {
+  width: 100%;
+  min-width: 0;
+  position: relative; /* Anchor the dropdown */
+  box-sizing: inherit;
+  font-size: 12px;
+}
+
+.faculty-multiselect .multiselect__tags {
+  border-radius: 8px;
+  border: 1px solid #d0d7de;
+  background: white;
+  padding: 4px 30px 0 8px;
+  min-height: 36px;
+  font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.faculty-multiselect .multiselect__input,
+.faculty-multiselect .multiselect__single {
+  font-size: 0.9rem;
+  color: #2c3e50;
+}
+
+.faculty-multiselect .multiselect__placeholder {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  padding-top: 2px;
+}
+
+.faculty-multiselect .multiselect__select {
+  height: 34px;
+}
+
+/* Critical fix: dropdown popup stays inside the container */
+.faculty-multiselect .multiselect__content-wrapper {
+  border-radius: 0 0 8px 8px;
+  border-color: #d0d7de;
+  max-height: 200px;
+  overflow-y: auto;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+  left: 0 !important;
+  right: 0 !important;
+}
+
+.faculty-multiselect .multiselect__content {
+  max-width: 100%;
+}
+
+.faculty-multiselect .multiselect__option--highlight {
+  background: #2c3e50;
+}
+
+.faculty-multiselect .multiselect__option--selected {
+  background: #ecf0f1;
+  font-weight: 600;
 }
 
 @media (max-width: 1200px) {

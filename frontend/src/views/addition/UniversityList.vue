@@ -5,7 +5,12 @@
       <!-- Header -->
       <div class="card-header table-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0 text-white fw-semibold">University Table</h6>
-        <button class="btn btn-add btn-sm" @click="addUniversity">
+        <!-- Show Add button only for super_admin -->
+        <button
+          v-if="authStore.isMinistryAuthority"
+          class="btn btn-add btn-sm"
+          @click="addUniversity"
+        >
           <i class="bi bi-plus-circle me-1"></i> Add
         </button>
       </div>
@@ -47,12 +52,11 @@
                 <td>{{ startIndex + i + 1 }}</td>
                 <td>{{ uni.name }}</td>
                 <td class="text-center">
-                  <button class="btn btn-sm btn-warning me-2" @click="editUniversity(startIndex + i)">
-                    Edit
-                  </button>
-                  <button class="btn btn-sm btn-danger" @click="deleteUniversity(startIndex + i)">
-                    Delete
-                  </button>
+                  <template v-if="authStore.canManageUniversities">
+                    <button class="btn btn-sm btn-warning me-2" @click="editUniversity(uni)">Edit</button>
+                    <button class="btn btn-sm btn-danger" @click="deleteUniversity(uni)">Delete</button>
+                  </template>
+                  <span v-else class="text-muted">—</span>
                 </td>
               </tr>
 
@@ -93,9 +97,13 @@
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 
 const universities = ref([])
 const search = ref('')
@@ -147,16 +155,11 @@ const addUniversity = async () => {
 
   try {
     const response = await api.post('/universities', { name })
-
-    console.log('Response:', response) // debug
-
     universities.value.unshift(response.data)
   } catch (error) {
     console.error('Full error:', error)
-
     if (error.response) {
-      console.error('Server response:', error.response.data)
-      alert(JSON.stringify(error.response.data))
+      alert(error.response.data.message || 'Something went wrong')
     } else {
       alert('Something went wrong')
     }
@@ -174,6 +177,7 @@ const editUniversity = async (index) => {
     uni.name = name
   } catch (error) {
     console.error(error.response.data)
+    alert(error.response.data.message || 'Update failed')
   }
 }
 
@@ -187,6 +191,7 @@ const deleteUniversity = async (index) => {
     universities.value = universities.value.filter(u => u.id !== uni.id)
   } catch (error) {
     console.error(error.response.data)
+    alert(error.response.data.message || 'Delete failed')
   }
 }
 </script>

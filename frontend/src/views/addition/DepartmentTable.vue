@@ -5,7 +5,11 @@
       <!-- Header -->
       <div class="card-header table-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0 text-white fw-semibold">Department Table</h6>
-        <button class="btn btn-add btn-sm" @click="openAddModal">
+        <button 
+          v-if="authStore.canManageUniversityData"
+          class="btn btn-add btn-sm" 
+          @click="openAddModal"
+        >
           <i class="bi bi-plus-circle me-1"></i> Add
         </button>
       </div>
@@ -42,9 +46,12 @@
                 <td>{{ d.faculty_name }}</td>
                 <td>{{ d.university_name }}</td>
                 <td class="text-center">
-                  <button class="btn btn-sm btn-warning me-2" @click="openEditModal(d)">Edit</button>
-                  <button class="btn btn-sm btn-danger me-2" @click="deleteDepartment(d.id)">Delete</button>
-                  <button v-if="d.deleted_at" class="btn btn-sm btn-success" @click="restoreDepartment(d.id)">Restore</button>
+                  <template v-if="authStore.canManageUniversityData">
+                    <button class="btn btn-sm btn-warning me-2" @click="openEditModal(d)">Edit</button>
+                    <button class="btn btn-sm btn-danger me-2" @click="deleteDepartment(d.id)">Delete</button>
+                    <button v-if="d.deleted_at" class="btn btn-sm btn-success" @click="restoreDepartment(d.id)">Restore</button>
+                  </template>
+                  <span v-else class="text-muted">—</span>
                 </td>
               </tr>
 
@@ -108,7 +115,10 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import bootstrap from 'bootstrap/dist/js/bootstrap.bundle'
-import api from '@/services/api.js' // make sure you created api.js with axios defaults
+import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 
 // ===== DATA =====
 const departments = ref([])

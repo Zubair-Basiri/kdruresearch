@@ -11,14 +11,29 @@ class DepartmentController extends Controller
 {
     public function index()
     {
-        return response()->json(
-            Department::with('university', 'faculty')->latest()->get()
-        );
+        $query = Department::with('university', 'faculty');
+        $universityId = currentUniversityId();
+        if ($universityId) {
+            $query->where('university_id', $universityId);
+        }
+        return response()->json($query->latest()->get());
     }
 
     public function store(StoreDepartmentRequest $request)
     {
-        $department = Department::create($request->validated());
+        $data = $request->validated();
+        $universityId = currentUniversityId();
+        if ($universityId) {
+            $data['university_id'] = $universityId;
+            // Validate faculty belongs to this university
+            if (isset($data['faculty_id'])) {
+                $faculty = Faculty::where('id', $data['faculty_id'])->where('university_id', $universityId)->first();
+                if (!$faculty) {
+                    return response()->json(['message' => 'Invalid faculty for this university'], 422);
+                }
+            }
+        }
+        $department = Department::create($data);
         return response()->json($department, 201);
     }
 
@@ -31,18 +46,30 @@ class DepartmentController extends Controller
 
     public function update(UpdateDepartmentRequest $request, Department $department)
     {
+        $universityId = currentUniversityId();
+        if ($universityId && $department->university_id != $universityId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
         $department->update($request->validated());
         return response()->json($department);
     }
 
     public function destroy(Department $department)
     {
+        $universityId = currentUniversityId();
+        if ($universityId && $department->university_id != $universityId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
         $department->delete();
         return response()->json(['message' => 'Department soft deleted']);
     }
 
     public function restore($id)
     {
+        $universityId = currentUniversityId();
+        if ($universityId && $department->university_id != $universityId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
         $department = Department::withTrashed()->findOrFail($id);
         $department->restore();
         return response()->json(['message' => 'Department restored']);
@@ -50,6 +77,10 @@ class DepartmentController extends Controller
 
     public function forceDelete($id)
     {
+        $universityId = currentUniversityId();
+        if ($universityId && $department->university_id != $universityId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
         $department = Department::withTrashed()->findOrFail($id);
         $department->forceDelete();
         return response()->json(['message' => 'Department permanently deleted']);

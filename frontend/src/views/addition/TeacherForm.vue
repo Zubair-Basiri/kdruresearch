@@ -53,7 +53,7 @@
                 <label class="form-label">Faculty</label>
                 <select v-model="form.faculty_id" class="form-select" required>
                   <option value="">Select Faculty</option>
-                  <option v-for="f in faculties" :key="f.id" :value="f.id">{{ f.facultyname }}</option>
+                  <option v-for="f in filteredFaculties" :key="f.id" :value="f.id">{{ f.facultyname }}</option>
                 </select>
               </div>
 
@@ -61,7 +61,7 @@
                 <label class="form-label">Department</label>
                 <select v-model="form.department_id" class="form-select" required>
                   <option value="">Select Department</option>
-                  <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.deptname }}</option>
+                  <option v-for="d in filteredDepartments" :key="d.id" :value="d.id">{{ d.deptname }}</option>
                 </select>
               </div>
             </div>
@@ -110,7 +110,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '@/services/api.js'
 
@@ -119,6 +119,7 @@ const route = useRoute()
 
 const isEdit = computed(() => !!route.params.id)
 const specializationInput = ref('')
+const loading = ref(false)
 
 // Reactive form
 const form = reactive({
@@ -131,12 +132,41 @@ const form = reactive({
   specialized_area: []
 })
 
-// Static lists (you can fetch from API if dynamic)
+// Static lists
 const universities = ref([])
 const faculties = ref([])
 const departments = ref([])
 const grades = ['Jr. Teaching Assist.','Teaching Assistant', 'Sr. Teaching Assistant', 'Assoc. Prof.', 'Assist. Prof.', 'Professor']
 const qualification = ['Bachelor','Master','PhD','Post PhD']
+
+// Filtered lists – force integer comparison
+const filteredFaculties = computed(() => {
+  if (!form.university_id) return faculties.value
+  const uniId = parseInt(form.university_id, 10)
+  return faculties.value.filter(f => f.university_id === uniId)
+})
+
+const filteredDepartments = computed(() => {
+  if (!form.faculty_id) return departments.value
+  const facId = parseInt(form.faculty_id, 10)
+  return departments.value.filter(d => d.faculty_id === facId)
+})
+
+// Watchers – skip during loading
+watch(() => form.university_id, (newVal) => {
+  if (loading.value) return
+  if (newVal) {
+    form.faculty_id = ''
+    form.department_id = ''
+  }
+})
+
+watch(() => form.faculty_id, (newVal) => {
+  if (loading.value) return
+  if (newVal) {
+    form.department_id = ''
+  }
+})
 
 // Fetch select options
 const fetchOptions = async () => {
@@ -155,17 +185,24 @@ const fetchOptions = async () => {
 // Fetch lecturer data if editing
 const fetchLecturer = async () => {
   if (!isEdit.value) return
+  loading.value = true
   try {
     const res = await api.get(`/lecturers/${route.params.id}`)
     const l = res.data
+    // Set values – use parseInt to ensure numbers
     form.lecturername = l.lecturername
-    form.university_id = l.university_id
-    form.faculty_id = l.faculty_id
-    form.department_id = l.department_id
-    form.grade = l.grade
-    form.qualification = l.qualification
+    form.university_id = l.university_id ? parseInt(l.university_id, 10) : ''
+    form.faculty_id = l.faculty_id ? parseInt(l.faculty_id, 10) : ''
+    form.department_id = l.department_id ? parseInt(l.department_id, 10) : ''
+    form.grade = l.grade || ''
+    form.qualification = l.qualification || ''
     form.specialized_area = l.specialized_area || []
+    // Wait for DOM update to ensure select options are rendered
+    await nextTick()
   } catch (err) { console.error(err) }
+  finally {
+    loading.value = false
+  }
 }
 
 // Specialization handlers

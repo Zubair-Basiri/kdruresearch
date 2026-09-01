@@ -26,6 +26,21 @@
                         <option value="admin">Admin</option>
                         <option value="super_admin">Super Admin</option>
                         <option value="lecturer_profile_admin">Lecturer Profile Admin</option>
+                        <!-- Only show ministry_authority if current user has that role -->
+                        <option v-if="authStore.user?.role === 'ministry_authority'" value="ministry_authority">Ministry Authority</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- University dropdown for admin/super_admin/lecturer_profile_admin -->
+                  <div v-if="form.role !== 'user' && !authStore.isMinistryAuthority" class="col-lg-6">
+                    <div class="form-group">
+                      <label for="university" class="form-label">University</label>
+                      <select class="form-control form-control-lg" id="university" v-model="form.university_id" required>
+                        <option value="">Select University</option>
+                        <option v-for="uni in universities" :key="uni.id" :value="uni.id">
+                          {{ uni.name }}
+                        </option>
                       </select>
                     </div>
                   </div>
@@ -143,6 +158,9 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Multiselect from 'vue-multiselect';
 import api from '@/services/api';
+import { useAuthStore } from '@/stores/auth'; // Add this import
+
+const authStore = useAuthStore(); // Add this line
 
 const route = useRoute();
 const router = useRouter();
@@ -159,6 +177,7 @@ const form = ref({
   password: '',
   password_confirmation: '',
   lecturer_id: null,
+  university_id: null,
 });
 
 // UI state
@@ -167,6 +186,17 @@ const error = ref(null);
 const validationErrors = ref([]);
 const lecturers = ref([]);
 const selectedLecturer = ref(null);
+const universities = ref([]);
+
+const fetchUniversities = async () => {
+  try {
+    const res = await api.get('/universities');
+    universities.value = res.data;
+  } catch (err) {
+    console.error('Failed to fetch universities', err);
+  }
+};
+
 
 // Prepare lecturer options for multiselect
 const lecturerOptions = computed(() => 
@@ -214,9 +244,14 @@ const loadUserData = async () => {
       form.value.first_name = '';
       form.value.last_name = '';
     }
+
+    if (user.role === 'ministry_authority') {
+        form.value.university_id = null; // ensure it's null
+    }
     
     form.value.email = user.email;
     form.value.role = user.role;
+    form.value.university_id = user.university_id || null;
     
     // If user is a lecturer, pre-select their linked lecturer
     if (user.role === 'user' && user.lecturer_id) {
@@ -258,6 +293,7 @@ async function handleSubmit() {
   let userData = {
     email: form.value.email,
     role: form.value.role,
+    university_id: form.value.university_id,
   };
 
   // For admin/super_admin: use first_name + last_name
@@ -310,19 +346,23 @@ async function handleSubmit() {
 
 // Reset lecturer selection when role changes from user to something else
 watch(() => form.value.role, (newRole) => {
-  if (newRole !== 'user') {
-    selectedLecturer.value = null;
-    form.value.lecturer_id = null;
-  } else {
-    // When switching to user, clear any name fields (they are hidden)
-    form.value.first_name = '';
-    form.value.last_name = '';
-  }
+    if (newRole !== 'user') {
+        // Clear lecturer selection
+        selectedLecturer.value = null;
+        form.value.lecturer_id = null;
+    } else {
+        form.value.first_name = '';
+        form.value.last_name = '';
+    }
+    if (newRole === 'ministry_authority') {
+        form.value.university_id = null;
+    }
 });
 
 onMounted(async () => {
   await fetchLecturers();
   await loadUserData();
+  await fetchUniversities();
 });
 </script>
 

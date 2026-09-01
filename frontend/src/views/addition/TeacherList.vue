@@ -5,7 +5,13 @@
       <!-- HEADER -->
       <div class="card-header table-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0 text-white fw-semibold">Lecturers</h6>
-        <RouterLink to="/dashboard/teachers/form" class="btn btn-add btn-sm">+ Add Lecturer</RouterLink>
+        <RouterLink 
+          v-if="authStore.canManageUniversityData"
+          to="/dashboard/teachers/form" 
+          class="btn btn-add btn-sm"
+        >
+          + Add Lecturer
+        </RouterLink>
       </div>
 
       <div class="card-body pt-3">
@@ -49,8 +55,11 @@
                 <td>{{ t.qualification }}</td>
                 <td>{{ t.specialized_area }}</td>
                 <td class="text-center">
-                  <RouterLink :to="`/dashboard/teachers/form/${t.id}`" class="btn btn-sm btn-warning me-2">Edit</RouterLink>
-                  <button class="btn btn-sm btn-danger me-2" @click="deleteLecturer(t.id)">Delete</button>
+                  <template v-if="authStore.canManageUniversityData">
+                    <RouterLink :to="`/dashboard/teachers/form/${t.id}`" class="btn btn-sm btn-warning me-2">Edit</RouterLink>
+                    <button class="btn btn-sm btn-danger me-2" @click="deleteLecturer(t.id)">Delete</button>
+                  </template>
+                  <span v-else class="text-muted">—</span>
                   <!-- <button v-if="t.deleted_at" class="btn btn-sm btn-success" @click="restoreLecturer(t.id)">Restore</button> -->
                 </td>
               </tr>
@@ -77,7 +86,10 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import api from '@/services/api.js'
+import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 
 // Data
 const lecturers = ref([])

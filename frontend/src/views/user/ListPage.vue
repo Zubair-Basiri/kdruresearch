@@ -326,3 +326,126 @@ onMounted(() => {
   }
 }
 </style>
+
+<style scoped>
+/* Academic style enhancements */
+.card {
+  border-radius: 1rem;
+  transition: all 0.2s ease;
+}
+.card-header {
+  padding-bottom: 0.5rem;
+}
+.table thead th {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #2c3e50;
+  background-color: #f8fafc;
+  padding: 1rem 0.75rem;
+}
+.table tbody td {
+  padding: 1rem 0.75rem;
+  color: #4a5568;
+  font-size: 0.95rem;
+}
+.avatar-40 {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bg-soft-primary {
+  background-color: rgba(52, 152, 219, 0.1);
+}
+.btn-icon {
+  width: 50px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+.btn-outline-primary:hover {
+  background-color: #3498db;
+  border-color: #3498db;
+  color: white;
+}
+.btn-outline-danger:hover {
+  background-color: #e74c3c;
+  border-color: #e74c3c;
+  color: white;
+}
+.password-placeholder {
+  font-family: monospace;
+  letter-spacing: 2px;
+  color: #95a5a6;
+}
+
+/* Search bar styling */
+.search-wrapper {
+  position: relative;
+  width: 260px;
+}
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9aa8b5;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+.search-input {
+  padding-left: 32px;
+  padding-right: 32px;
+  border-radius: 30px;
+  border: 1px solid #e2e8f0;
+  background-color: #fff;
+}
+.search-input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
+}
+.clear-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #9aa8b5;
+  font-size: 1rem;
+}
+.clear-icon:hover {
+  color: #e74c3c;
+}
+
+.pagination-wrapper {
+  padding-top: 10px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .table {
+    font-size: 0.85rem;
+  }
+  .avatar-40 {
+    width: 30px;
+    height: 30px;
+  }
+  .search-wrapper {
+    width: 180px;
+  }
+  .card-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .d-flex.gap-2 {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+</style>

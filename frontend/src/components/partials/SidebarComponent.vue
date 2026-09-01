@@ -36,7 +36,7 @@
           :visible="currentRoute.includes('menu-style')"
         >
           <side-menu
-            v-if="authStore.hasRole(['admin', 'super_admin'])"
+            v-if="authStore.canManageUniversityData"
             title="University"
             icon="circle"
             :icon-size="10"
@@ -45,7 +45,7 @@
             :route="{ to: 'universityList' }"
           ></side-menu>
           <side-menu
-            v-if="authStore.hasRole(['admin', 'super_admin'])"
+            v-if="authStore.canManageUniversityData"
             title="Faculty"
             icon="circle"
             :icon-size="10"
@@ -54,7 +54,7 @@
             :route="{ to: 'facultyTable' }"
           ></side-menu>
           <side-menu
-            v-if="authStore.hasRole(['admin', 'super_admin'])"
+            v-if="authStore.canManageUniversityData"
             title="Department"
             icon="circle"
             :icon-size="10"
@@ -63,7 +63,7 @@
             :route="{ to: 'departmentTable' }"
           ></side-menu>
           <side-menu
-            v-if="authStore.hasRole(['admin', 'super_admin'])"
+            v-if="authStore.canManageUniversityData"
             title="Lecturers"
             icon="circle"
             :icon-size="10"
@@ -92,7 +92,7 @@
 
       <!-- Key Findings – hidden for lecturer_profile_admin -->
       <side-menu
-        v-if="!authStore.isLecturerProfileAdmin && authStore.hasRole(['admin', 'super_admin'])"
+        v-if="!authStore.isLecturerProfileAdmin && authStore.canManageUniversityData"
         title="Key Findings"
         icon="table"
         :route="{ to: 'default.keyFindings' }"
@@ -162,12 +162,12 @@
 
       <!-- User Management – already admin-only, but also hide for lecturer_profile_admin -->
       <side-menu
-        v-if="!authStore.isLecturerProfileAdmin && authStore.hasRole(['super_admin'])"
+        v-if="!authStore.isLecturerProfileAdmin && authStore.canManageUsers"
         title="User Management"
         :static-item="true"
       ></side-menu>
       <side-menu
-        v-if="!authStore.isLecturerProfileAdmin && authStore.hasRole(['super_admin'])"
+        v-if="!authStore.isLecturerProfileAdmin && authStore.canManageUsers"
         title="Users"
         icon="user-group"
         toggle-id="users"

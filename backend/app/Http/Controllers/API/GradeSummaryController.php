@@ -19,38 +19,39 @@ class GradeSummaryController extends Controller
     public function index(Request $request)
     {
         $metric = $request->metric;
+        $universityId = currentUniversityId();
 
         switch ($metric) {
 
             case "Faculty/Grade":
-                return $this->byFaculty();
+                return $this->byFaculty($universityId);
 
             case "Department/Grade":
-                return $this->byDepartment();
+                return $this->byDepartment($universityId);
 
             case "Researchers/Grade":
-                return $this->byLecturer();
+                return $this->byLecturer($universityId);
 
             case "Publication Type/Grade":
-                return $this->byPaperField('publication');
+                return $this->byPaperField('publication', $universityId);
 
             case "Funding Source/Grade":
-                return $this->byPaperField('funding');
+                return $this->byPaperField('funding', $universityId);
 
             case "Indexed/Grade":
-                return $this->byPaperField('indexed');
+                return $this->byPaperField('indexed', $universityId);
 
             case "Collaboration/Grade":
-                return $this->byPaperField('collaboration');
+                return $this->byPaperField('collaboration', $universityId);
 
             case "Status/Grade":
-                return $this->byPaperField('status');
+                return $this->byPaperField('status', $universityId);
 
             case "Qualification/Grade":
-                return $this->byLecturerField('qualification');
+                return $this->byLecturerField('qualification', $universityId);
 
             case "Language/Grade":
-                return $this->byPaperField('language');
+                return $this->byPaperField('language', $universityId);
 
             default:
                 return response()->json([]);
@@ -60,112 +61,131 @@ class GradeSummaryController extends Controller
     /* ---------------------------------
        FACULTY
     --------------------------------- */
-    private function byFaculty()
+    private function byFaculty($universityId)
     {
-        $faculties = Faculty::all();
+        $faculties = Faculty::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->get();
         $result = [];
-
         foreach ($faculties as $faculty) {
-
             $papers = AcademicPaper::whereHas('lecturer', function ($q) use ($faculty) {
                 $q->where('faculty_id', $faculty->id);
+            })->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
             })->get();
 
             $result[] = $this->buildGradeRow($faculty->facultyname, $papers);
         }
-
         return response()->json($result);
     }
 
     /* ---------------------------------
        DEPARTMENT
     --------------------------------- */
-    private function byDepartment()
+    private function byDepartment($universityId)
     {
-        $departments = Department::all();
+        $departments = Department::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->get();
+
         $result = [];
-
         foreach ($departments as $dept) {
-
             $papers = AcademicPaper::whereHas('lecturer', function ($q) use ($dept) {
                 $q->where('department_id', $dept->id);
+            })->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
             })->get();
 
             $result[] = $this->buildGradeRow($dept->deptname, $papers);
         }
-
         return response()->json($result);
     }
 
     /* ---------------------------------
     RESEARCHERS / LECTURERS
     --------------------------------- */
-    private function byLecturer()
+    private function byLecturer($universityId)
     {
-        $lecturers = Lecturer::all();
+        $lecturers = Lecturer::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->get();
+
         $result = [];
-
         foreach ($lecturers as $lecturer) {
+            $papers = AcademicPaper::where('lecturer_id', $lecturer->id)
+                ->when($universityId, function ($q) use ($universityId) {
+                    return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                        $sq->where('university_id', $universityId);
+                    });
+                })->get();
 
-            // Get all papers for this lecturer
-            $papers = AcademicPaper::where('lecturer_id', $lecturer->id)->get();
-
-            // Build grade row
             $result[] = $this->buildGradeRow($lecturer->lecturername, $papers);
         }
-
         return response()->json($result);
     }
 
     /* ---------------------------------
        LECTURER FIELD (Qualification)
     --------------------------------- */
-    private function byLecturerField($field)
+    private function byLecturerField($field, $universityId)
     {
         $values = Lecturer::whereNotNull($field)
             ->where($field, '!=', '')
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->where('university_id', $universityId);
+            })
             ->distinct()
             ->pluck($field);
 
         $result = [];
-
         foreach ($values as $value) {
-
             $papers = AcademicPaper::whereHas('lecturer', function ($q) use ($field, $value) {
                 $q->where($field, $value);
+            })->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
             })->get();
 
             $result[] = $this->buildGradeRow($value, $papers);
         }
-
         return response()->json($result);
     }
 
     /* ---------------------------------
        PAPER FIELD
     --------------------------------- */
-    private function byPaperField($field)
+    private function byPaperField($field, $universityId)
     {
         $values = AcademicPaper::whereNotNull($field)
             ->where($field, '!=', '')
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
+            })
             ->distinct()
             ->pluck($field);
 
         $result = [];
-
         foreach ($values as $value) {
-
-            $papers = AcademicPaper::where($field, $value)->get();
+            $papers = AcademicPaper::where($field, $value)
+                ->when($universityId, function ($q) use ($universityId) {
+                    return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                        $sq->where('university_id', $universityId);
+                    });
+                })->get();
 
             $result[] = $this->buildGradeRow($value, $papers);
         }
-
         return response()->json($result);
     }
 
-    /* ---------------------------------
-       CORE GRADE CALCULATION
-    --------------------------------- */
+    /* ---- Core grade calculation ---- */
     private function buildGradeRow($label, $papers)
     {
         $grades = [
@@ -180,13 +200,10 @@ class GradeSummaryController extends Controller
         $totalCitation = 0;
 
         foreach ($papers as $paper) {
-
             $grade = optional($paper->lecturer)->grade;
-
             if (isset($grades[$grade])) {
                 $grades[$grade]++;
             }
-
             $totalCitation += $paper->citation ?? 0;
         }
 
@@ -303,48 +320,39 @@ class GradeSummaryController extends Controller
 
     private function getReportData($metric)
     {
+        $universityId = currentUniversityId();
+
         switch ($metric) {
-
             case "Faculty/Grade":
-                $records = $this->getFacultyGradeData();
+                $records = $this->getFacultyGradeData($universityId);
                 break;
-
             case "Department/Grade":
-                $records = $this->getDepartmentGradeData();
+                $records = $this->getDepartmentGradeData($universityId);
                 break;
-
             case "Researchers/Grade":
-                $records = $this->getResearchersGradeData();
+                $records = $this->getResearchersGradeData($universityId);
                 break;
-
             case "Publication Type/Grade":
-                $records = $this->getPaperFieldGradeData('publication');
+                $records = $this->getPaperFieldGradeData('publication', $universityId);
                 break;
-
             case "Funding Source/Grade":
-                $records = $this->getPaperFieldGradeData('funding');
+                $records = $this->getPaperFieldGradeData('funding', $universityId);
                 break;
-
             case "Indexed/Grade":
-                $records = $this->getPaperFieldGradeData('indexed');
+                $records = $this->getPaperFieldGradeData('indexed', $universityId);
                 break;
-
             case "Collaboration/Grade":
-                $records = $this->getPaperFieldGradeData('collaboration');
+                $records = $this->getPaperFieldGradeData('collaboration', $universityId);
                 break;
-
             case "Status/Grade":
-                $records = $this->getPaperFieldGradeData('status');
+                $records = $this->getPaperFieldGradeData('status', $universityId);
                 break;
-
             case "Qualification/Grade":
-                $records = $this->getLecturerFieldGradeData('qualification');
+                $records = $this->getLecturerFieldGradeData('qualification', $universityId);
                 break;
-
             case "Language/Grade":
-                $records = $this->getPaperFieldGradeData('language');
+                $records = $this->getPaperFieldGradeData('language', $universityId);
                 break;
-
             default:
                 $records = [];
         }
@@ -352,7 +360,6 @@ class GradeSummaryController extends Controller
         date_default_timezone_set('Asia/Kabul');
 
         $rows = [];
-
         foreach ($records as $record) {
             $row = new \stdClass();
             $row->label = $record['label'];
@@ -376,22 +383,24 @@ class GradeSummaryController extends Controller
         ];
     }
 
-    /**
-     * Get raw faculty grade data as array
-     */
-    private function getFacultyGradeData()
+    /* ---- Data helpers with university filter ---- */
+    private function getFacultyGradeData($universityId)
     {
-        $faculties = Faculty::all();
-        $result = [];
+        $faculties = Faculty::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->get();
 
+        $result = [];
         foreach ($faculties as $faculty) {
             $papers = AcademicPaper::whereHas('lecturer', function ($q) use ($faculty) {
                 $q->where('faculty_id', $faculty->id);
+            })->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
             })->get();
 
             $data = $this->buildGradeRow1($faculty->facultyname, $papers);
-
-            // Uniform label key
             $result[] = [
                 'label' => $faculty->facultyname,
                 'total_papers' => $data['total_papers'],
@@ -404,22 +413,26 @@ class GradeSummaryController extends Controller
                 'total_citations' => $data['total_citations'],
             ];
         }
-
         return $result;
     }
 
-    private function getDepartmentGradeData()
+    private function getDepartmentGradeData($universityId)
     {
-        $departments = Department::all();
-        $result = [];
+        $departments = Department::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->get();
 
+        $result = [];
         foreach ($departments as $dept) {
             $papers = AcademicPaper::whereHas('lecturer', function ($q) use ($dept) {
                 $q->where('department_id', $dept->id);
+            })->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
             })->get();
 
             $data = $this->buildGradeRow1($dept->deptname, $papers);
-
             $result[] = [
                 'label' => $dept->deptname,
                 'total_papers' => $data['total_papers'],
@@ -432,19 +445,25 @@ class GradeSummaryController extends Controller
                 'total_citations' => $data['total_citations'],
             ];
         }
-
         return $result;
     }
 
-    private function getResearchersGradeData()
+    private function getResearchersGradeData($universityId)
     {
-        $lecturers = Lecturer::all();
+        $lecturers = Lecturer::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->get();
+
         $result = [];
-
         foreach ($lecturers as $lecturer) {
-            $papers = AcademicPaper::where('lecturer_id', $lecturer->id)->get();
-            $data = $this->buildGradeRow1($lecturer->lecturername, $papers);
+            $papers = AcademicPaper::where('lecturer_id', $lecturer->id)
+                ->when($universityId, function ($q) use ($universityId) {
+                    return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                        $sq->where('university_id', $universityId);
+                    });
+                })->get();
 
+            $data = $this->buildGradeRow1($lecturer->lecturername, $papers);
             $result[] = [
                 'label' => $lecturer->lecturername,
                 'total_papers' => $data['total_papers'],
@@ -457,23 +476,31 @@ class GradeSummaryController extends Controller
                 'total_citations' => $data['total_citations'],
             ];
         }
-
         return $result;
     }
 
-    private function getPaperFieldGradeData($field)
+    private function getPaperFieldGradeData($field, $universityId)
     {
         $values = AcademicPaper::whereNotNull($field)
             ->where($field, '!=', '')
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
+            })
             ->distinct()
             ->pluck($field);
 
         $result = [];
-
         foreach ($values as $value) {
-            $papers = AcademicPaper::where($field, $value)->get();
-            $data = $this->buildGradeRow1($value, $papers);
+            $papers = AcademicPaper::where($field, $value)
+                ->when($universityId, function ($q) use ($universityId) {
+                    return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                        $sq->where('university_id', $universityId);
+                    });
+                })->get();
 
+            $data = $this->buildGradeRow1($value, $papers);
             $result[] = [
                 'label' => $value,
                 'total_papers' => $data['total_papers'],
@@ -486,26 +513,30 @@ class GradeSummaryController extends Controller
                 'total_citations' => $data['total_citations'],
             ];
         }
-
         return $result;
     }
 
-    private function getLecturerFieldGradeData($field)
+    private function getLecturerFieldGradeData($field, $universityId)
     {
         $values = Lecturer::whereNotNull($field)
             ->where($field, '!=', '')
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->where('university_id', $universityId);
+            })
             ->distinct()
             ->pluck($field);
 
         $result = [];
-
         foreach ($values as $value) {
             $papers = AcademicPaper::whereHas('lecturer', function ($q) use ($field, $value) {
                 $q->where($field, $value);
+            })->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
             })->get();
 
             $data = $this->buildGradeRow1($value, $papers);
-
             $result[] = [
                 'label' => $value,
                 'total_papers' => $data['total_papers'],
@@ -518,10 +549,8 @@ class GradeSummaryController extends Controller
                 'total_citations' => $data['total_citations'],
             ];
         }
-
         return $result;
     }
-
 
     private function buildGradeRow1($facultyName, $papers)
     {

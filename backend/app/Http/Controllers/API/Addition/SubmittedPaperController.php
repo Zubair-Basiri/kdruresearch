@@ -5,17 +5,33 @@ namespace App\Http\Controllers\API\Addition;
 use App\Http\Controllers\Controller;
 use App\Models\SubmittedPaper;
 use App\Models\AcademicPaper;
+use App\Models\Lecturer;
+use App\Services\PaperDuplicateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class SubmittedPaperController extends Controller
 {
+
+    protected PaperDuplicateService $duplicateService;
+
+    public function __construct(PaperDuplicateService $duplicateService)
+    {
+        $this->duplicateService = $duplicateService;
+    }
+
     // List submissions (lecturer sees own; admin sees all)
     public function index(Request $request)
     {
         $user = Auth::user();
         $query = SubmittedPaper::with('lecturer');
+        $universityId = currentUniversityId();
+        if ($universityId) {
+            $query->whereHas('lecturer', function ($q) use ($universityId) {
+                $q->where('university_id', $universityId);
+            });
+        }
 
         if ($user->role === 'user') {
             $lecturerId = $user->lecturer?->id;
@@ -73,6 +89,24 @@ class SubmittedPaperController extends Controller
             'paper_link' => 'nullable|url|max:2000',
         ]);
 
+        $universityId = currentUniversityId();
+        if ($universityId) {
+            $lecturer = Lecturer::where('id', $lecturerId)->where('university_id', $universityId)->first();
+            if (!$lecturer) {
+                return response()->json(['message' => 'Invalid lecturer for this university'], 422);
+            }
+        }
+
+        // ---- DUPLICATE CHECK ----
+        $result = $this->duplicateService->findDuplicate(
+            $validated['title'],
+            $validated['author_position'] ?? null,
+            $validated['language'] ?? null 
+        );
+        if ($result) {
+            return $this->duplicateResponse($result);
+        }
+
         $submission = SubmittedPaper::create([
             'lecturer_id' => $lecturerId,
             'approval_status' => 'pending',
@@ -111,6 +145,25 @@ class SubmittedPaperController extends Controller
             'status' => 'nullable|string|in:Published,Proposal Stage,Ongoing Research',
             'paper_link' => 'nullable|url|max:2000',
         ]);
+
+        $universityId = currentUniversityId();
+        if ($universityId) {
+            $lecturer = $academicPaper->lecturer;
+            if (!$lecturer || $lecturer->university_id != $universityId) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+        }
+
+        // Run duplicate check only if title or author_position changed
+        if (isset($validated['title']) || isset($validated['author_position'])) {
+            $title = $validated['title'] ?? $submittedPaper->title;
+            $authorPos = $validated['author_position'] ?? $submittedPaper->author_position;
+            $language = $validated['language'] ?? $submittedPaper->language;
+            $result = $this->duplicateService->findDuplicate($title, $authorPos, $language, $submittedPaper->id, 'submitted');
+            if ($result) {
+                return $this->duplicateResponse($result);
+            }
+        }
 
         $submittedPaper->update($validated);
         return response()->json($submittedPaper);
@@ -224,5 +277,38 @@ class SubmittedPaperController extends Controller
         if ($user->lecturer?->id !== $submission->lecturer_id) {
             abort(403, 'Unauthorized');
         }
+    }
+
+    protected function duplicateResponse(array $result): \Illuminate\Http\JsonResponse
+    {
+        $messages = [
+            'exact' => 'A paper with this exact title already exists for this author position.',
+            'same_language' => 'A very similar paper already exists for this author position.',
+            'cross_language' => 'A semantically equivalent paper already exists in another language for this author position.',
+        ];
+
+        $errorMessages = [
+            'exact' => 'This title already exists for this author position.',
+            'same_language' => 'A very similar title already exists for this author position.',
+            'cross_language' => 'This paper appears to be a duplicate of an existing paper in another language.',
+        ];
+
+        $type = $result['duplicate_type'];
+        $message = $messages[$type] ?? 'A duplicate paper was found.';
+        $errorMessage = $errorMessages[$type] ?? 'Duplicate paper detected.';
+
+        return response()->json([
+            'message' => $message,
+            'duplicate' => true,
+            'duplicate_type' => $type,
+            'similarity' => $result['similarity'],
+            'matched_paper_id' => $result['matched_paper_id'],
+            'matched_table' => $result['matched_table'],
+            'matched_title' => $result['matched_title'],
+            'matched_author_position' => $result['matched_author_position'],
+            'errors' => [
+                'title' => [$errorMessage],
+            ],
+        ], 422);
     }
 }

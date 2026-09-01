@@ -17,35 +17,36 @@ class FacultySummaryController extends Controller
     public function index(Request $request)
     {
         $metric = $request->metric;  // e.g., "Publication Type / Faculty"
+        $universityId = currentUniversityId();
 
         switch ($metric) {
 
             case "Publication Type / Faculty":
-                return $this->byPaperField('publication');
+                return $this->byPaperField('publication', $universityId);
 
             case "Academic Grade / Faculty":
-                return $this->byLecturerGrade();
+                return $this->byLecturerGrade($universityId);
 
             case "Education / Faculty":
-                return $this->byLecturerField('qualification');
+                return $this->byLecturerField('qualification', $universityId);
 
             case "Department / Faculty":
-                return $this->byDepartment();
+                return $this->byDepartment($universityId);
 
             case "Indexed / Faculty":
-                return $this->byPaperField('indexed');
+                return $this->byPaperField('indexed', $universityId);
 
             case "Research Area / Faculty":
-                return $this->byLecturerField('specialized_area');
+                return $this->byLecturerField('specialized_area', $universityId);
 
             case "Publication Language / Faculty":
-                return $this->byPaperField('language');
+                return $this->byPaperField('language', $universityId);
 
             case "Year / Faculty":
-                return $this->byPaperField('year');
+                return $this->byPaperField('year', $universityId);
 
             case "Researchers / Faculty":
-                return $this->byLecturerList();
+                return $this->byLecturerList($universityId);
 
             default:
                 return response()->json([]);
@@ -134,110 +135,126 @@ class FacultySummaryController extends Controller
     /* ---------------------------
        Generic: Count Papers by Paper Field
     ---------------------------- */
-    private function byPaperField($field)
+    private function byPaperField($field, $universityId)
     {
-        $faculties = Faculty::pluck('facultyname', 'id');
+        $faculties = Faculty::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->pluck('facultyname', 'id');
+
         $distinctValues = AcademicPaper::whereNotNull($field)
             ->where($field, '!=', '')
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                    $sq->where('university_id', $universityId);
+                });
+            })
             ->distinct()
             ->pluck($field)
             ->toArray();
 
         if ($field === 'year') {
-        rsort($distinctValues); // descending numeric sort
+            rsort($distinctValues);
         }
 
         $result = [];
-
         foreach ($distinctValues as $value) {
             $row = ['label' => $value, 'values' => []];
-
             foreach ($faculties as $id => $name) {
                 $count = AcademicPaper::where($field, $value)
                     ->whereHas('lecturer', function ($q) use ($id) {
                         $q->where('faculty_id', $id);
                     })
+                    ->when($universityId, function ($q) use ($universityId) {
+                        return $q->whereHas('lecturer.faculty', function ($sq) use ($universityId) {
+                            $sq->where('university_id', $universityId);
+                        });
+                    })
                     ->count();
-
                 $row['values'][$name] = $count;
             }
-
             $result[] = $row;
         }
-
         return response()->json($result);
     }
 
     /* ---------------------------
        Lecturer Field (qualification / grade / specialized_area)
     ---------------------------- */
-    private function byLecturerField($field, $raw = false)
-{
-    $faculties = Faculty::pluck('facultyname', 'id');
+    private function byLecturerField($field, $universityId)
+    {
+        $faculties = Faculty::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->pluck('facultyname', 'id');
 
-    if ($field === 'specialized_area') {
-        // Get all unique research areas from the JSON array in specialized_area
-        $allAreas = collect();
-        $lecturers = Lecturer::whereNotNull($field)
-            ->where($field, '!=', '')
-            ->get();
-
-        foreach ($lecturers as $lecturer) {
-            $areas = $lecturer->$field;
-            if (is_string($areas)) {
-                $decoded = json_decode($areas, true);
-                if (is_array($decoded)) {
-                    $allAreas = $allAreas->merge($decoded);
-                } elseif (!empty($areas)) {
-                    $allAreas->push($areas);
+        if ($field === 'specialized_area') {
+            $allAreas = collect();
+            $lecturers = Lecturer::whereNotNull($field)
+                ->where($field, '!=', '')
+                ->when($universityId, function ($q) use ($universityId) {
+                    return $q->where('university_id', $universityId);
+                })
+                ->get();
+            foreach ($lecturers as $lecturer) {
+                $areas = $lecturer->$field;
+                if (is_string($areas)) {
+                    $decoded = json_decode($areas, true);
+                    if (is_array($decoded)) {
+                        $allAreas = $allAreas->merge($decoded);
+                    } elseif (!empty($areas)) {
+                        $allAreas->push($areas);
+                    }
+                } elseif (is_array($areas)) {
+                    $allAreas = $allAreas->merge($areas);
                 }
-            } elseif (is_array($areas)) {
-                $allAreas = $allAreas->merge($areas);
             }
-        }
-        $distinctValues = $allAreas->filter()->unique()->sort()->values();
-    } else {
-        $distinctValues = Lecturer::whereNotNull($field)
-            ->where($field, '!=', '')
-            ->distinct()
-            ->pluck($field);
-    }
-
-    $result = [];
-
-    foreach ($distinctValues as $value) {
-        $row = ['label' => $value, 'values' => []];
-
-        foreach ($faculties as $id => $name) {
-            if ($field === 'specialized_area') {
-                // Count lecturers in this faculty that have this area anywhere in their JSON
-                $count = Lecturer::where('faculty_id', $id)
-                    ->where(function ($query) use ($field, $value) {
-                        // Match the area as JSON string value (supports both MySQL and PostgreSQL)
-                        $query->where($field, 'LIKE', '%"' . addslashes($value) . '"%')
-                              ->orWhere($field, 'LIKE', '%' . addslashes($value) . '%');
-                    })
-                    ->count();
-            } else {
-                $count = Lecturer::where('faculty_id', $id)
-                    ->where($field, $value)
-                    ->count();
-            }
-            $row['values'][$name] = $count;
+            $distinctValues = $allAreas->filter()->unique()->sort()->values();
+        } else {
+            $distinctValues = Lecturer::whereNotNull($field)
+                ->where($field, '!=', '')
+                ->when($universityId, function ($q) use ($universityId) {
+                    return $q->where('university_id', $universityId);
+                })
+                ->distinct()
+                ->pluck($field);
         }
 
-        $result[] = $row;
+        $result = [];
+        foreach ($distinctValues as $value) {
+            $row = ['label' => $value, 'values' => []];
+            foreach ($faculties as $id => $name) {
+                if ($field === 'specialized_area') {
+                    $count = Lecturer::where('faculty_id', $id)
+                        ->where(function ($query) use ($field, $value) {
+                            $query->where($field, 'LIKE', '%"' . addslashes($value) . '"%')
+                                  ->orWhere($field, 'LIKE', '%' . addslashes($value) . '%');
+                        })
+                        ->when($universityId, function ($q) use ($universityId) {
+                            return $q->where('university_id', $universityId);
+                        })
+                        ->count();
+                } else {
+                    $count = Lecturer::where('faculty_id', $id)
+                        ->where($field, $value)
+                        ->when($universityId, function ($q) use ($universityId) {
+                            return $q->where('university_id', $universityId);
+                        })
+                        ->count();
+                }
+                $row['values'][$name] = $count;
+            }
+            $result[] = $row;
+        }
+        return response()->json($result);
     }
-
-    return $raw ? $result : response()->json($result);
-}
 
     /* ---------------------------
        Lecturer Academic Grades
     ---------------------------- */
-    private function byLecturerGrade()
+    private function byLecturerGrade($universityId)
     {
-        $faculties = Faculty::pluck('facultyname', 'id');
+        $faculties = Faculty::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->pluck('facultyname', 'id');
 
         $grades = [
             "Jr. Teaching Assist.",
@@ -249,80 +266,81 @@ class FacultySummaryController extends Controller
         ];
 
         $result = [];
-
         foreach ($grades as $grade) {
             $row = ['label' => $grade, 'values' => []];
-
             foreach ($faculties as $id => $name) {
                 $count = Lecturer::where('faculty_id', $id)
                     ->where('grade', $grade)
+                    ->when($universityId, function ($q) use ($universityId) {
+                        return $q->where('university_id', $universityId);
+                    })
                     ->count();
-
                 $row['values'][$name] = $count;
             }
-
             $result[] = $row;
         }
-
         return response()->json($result);
     }
 
     /* ---------------------------
        Departments
     ---------------------------- */
-    private function byDepartment()
+    private function byDepartment($universityId)
     {
-        $faculties = Faculty::pluck('facultyname', 'id');
+        $faculties = Faculty::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->pluck('facultyname', 'id');
 
-        $departments = Department::pluck('deptname', 'id');
+        $departments = Department::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->pluck('deptname', 'id');
 
         $result = [];
-
         foreach ($departments as $deptName) {
             $row = ['label' => $deptName, 'values' => []];
-
             foreach ($faculties as $id => $name) {
                 $count = Lecturer::where('faculty_id', $id)
                     ->whereHas('department', function ($q) use ($deptName) {
                         $q->where('deptname', $deptName);
                     })
+                    ->when($universityId, function ($q) use ($universityId) {
+                        return $q->where('university_id', $universityId);
+                    })
                     ->count();
-
                 $row['values'][$name] = $count;
             }
-
             $result[] = $row;
         }
-
         return response()->json($result);
     }
 
     /* ---------------------------
        Researchers / Faculty
     ---------------------------- */
-    private function byLecturerList()
+    private function byLecturerList($universityId)
     {
-        $faculties = Faculty::pluck('facultyname', 'id');
+        $faculties = Faculty::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->pluck('facultyname', 'id');
 
-        $lecturers = Lecturer::pluck('lecturername');
+        $lecturers = Lecturer::when($universityId, function ($q) use ($universityId) {
+            return $q->where('university_id', $universityId);
+        })->pluck('lecturername');
 
         $result = [];
-
         foreach ($lecturers as $lecturer) {
             $row = ['label' => $lecturer, 'values' => []];
-
             foreach ($faculties as $id => $name) {
                 $count = Lecturer::where('faculty_id', $id)
                     ->where('lecturername', $lecturer)
+                    ->when($universityId, function ($q) use ($universityId) {
+                        return $q->where('university_id', $universityId);
+                    })
                     ->count();
-
                 $row['values'][$name] = $count;
             }
-
             $result[] = $row;
         }
-
         return response()->json($result);
     }
 }
-

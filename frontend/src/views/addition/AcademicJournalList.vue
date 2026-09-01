@@ -5,7 +5,12 @@
       <!-- HEADER -->
       <div class="card-header table-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0 text-white fw-semibold">Academic Journals & Submissions</h6>
-        <RouterLink to="/dashboard/academicJournals/form?submission=true" class="btn btn-add btn-sm">
+        <RouterLink 
+          v-if="authStore.canManageUniversityData || authStore.isUser"
+          to="/dashboard/academicJournals/form?submission=true" 
+          class="btn btn-add btn-sm"
+          @click="setReturnTab"
+        >
           + New Submission
         </RouterLink>
       </div>
@@ -55,13 +60,12 @@
                   <td>{{ paper.citation }}</td><td>{{ paper.funding }}</td><td>{{ paper.collaboration }}</td>
                   <td>{{ paper.language }}</td><td>{{ paper.status }}</td><td>{{ paper.author_position }}</td>
                   <td class="text-center">
-                    <!-- Only show edit/delete for admin -->
-                    <template v-if="isAdmin">
+                    <template v-if="authStore.canManageUniversityData">
                       <RouterLink :to="`/dashboard/academicJournals/form/${paper.id}`" class="btn btn-sm btn-warning me-2">Edit</RouterLink>
                       <button class="btn btn-sm btn-danger" @click="deletePublished(paper.id)">Delete</button>
                     </template>
                     <span v-else class="text-muted">—</span>
-                   </td>
+                  </td>
                 </tr>
                 <tr v-if="filteredPublished.length === 0"><td colspan="13" class="text-center">No published papers found</td></tr>
               </tbody>
@@ -82,7 +86,6 @@
               <select v-model="subApprovalFilter" class="form-select w-auto">
                 <option value="">All Approval Status</option>
                 <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
               </select>
             </div>
@@ -123,22 +126,27 @@
                   </td>
                   <td class="text-start">{{ sub.admin_comment || '—' }}</td>
                   <td class="text-center">
-                    <!-- Lecturer actions: only when pending -->
-                    <template v-if="!isAdmin && sub.approval_status === 'pending'">
-                      <RouterLink :to="`/dashboard/academicJournals/form/${sub.id}?submission=true`" class="btn btn-sm btn-warning me-2">Edit</RouterLink>
-                      <!-- Delete button removed as requested -->
+                    <!-- Edit button for lecturers & admins (when pending) -->
+                    <template v-if="sub.approval_status === 'pending' && (authStore.isUser || authStore.canManageUniversityData)">
+                      <RouterLink 
+                        :to="`/dashboard/academicJournals/form/${sub.id}?submission=true`" 
+                        class="btn btn-sm btn-warning me-2"
+                        @click="setReturnTab"
+                      >
+                        Edit
+                      </RouterLink>
                     </template>
                     <!-- Admin actions: only when pending -->
-                    <template v-if="isAdmin && sub.approval_status === 'pending'">
+                    <template v-if="authStore.canManageUniversityData && sub.approval_status === 'pending'">
                       <button class="btn btn-sm btn-outline-secondary me-2" @click="openCommentModal(sub)">✏️ Comment</button>
                       <button class="btn btn-sm btn-success me-2" @click="openApproveModal(sub)">Approve</button>
                       <button class="btn btn-sm btn-danger" @click="openRejectModal(sub)">Reject</button>
                     </template>
                     <!-- For approved/rejected, no actions -->
-                    <span v-if="isAdmin && sub.approval_status !== 'pending'" class="text-muted">—</span>
+                    <span v-if="authStore.canManageUniversityData && sub.approval_status !== 'pending'" class="text-muted">—</span>
                   </td>
                 </tr>
-                <tr v-if="filteredSubmissions.length === 0"><td colspan="8" class="text-center">No submissions found</td></tr>
+                <tr v-if="filteredSubmissions.length === 0"><td colspan="9" class="text-center">No submissions found</td></tr>
               </tbody>
             </table>
           </div>
@@ -195,6 +203,7 @@ import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
+// Define isAdmin for the tab label
 const isAdmin = computed(() => authStore.hasRole(['admin', 'super_admin']))
 
 // ==================== Published Papers ====================
@@ -226,12 +235,15 @@ const filteredPublished = computed(() => {
   }
   return list
 })
+// eslint-disable-next-line no-unused-vars
 const pubTotalPages = computed(() => Math.ceil(filteredPublished.value.length / pubPerPage.value) || 1)
+// eslint-disable-next-line no-unused-vars
 const paginatedPublished = computed(() => {
   const start = (pubCurrentPage.value - 1) * pubPerPage.value
   return filteredPublished.value.slice(start, start + pubPerPage.value)
 })
 
+// eslint-disable-next-line no-unused-vars
 const deletePublished = async (id) => {
   if (!confirm('Delete this paper permanently?')) return
   try {
@@ -256,13 +268,15 @@ const fetchSubmissions = async () => {
   } catch (err) { console.error(err) }
 }
 
+// Filter out approved submissions
 const filteredSubmissions = computed(() => {
   let list = submissions.value
+  // Exclude approved submissions
+  list = list.filter(s => s.approval_status !== 'approved')
   if (subSearch.value) {
     const term = subSearch.value.toLowerCase()
     list = list.filter(s => s.title.toLowerCase().includes(term))
   }
-  // Approval filter is already sent to backend, but also filter locally to be safe
   if (subApprovalFilter.value) {
     list = list.filter(s => s.approval_status === subApprovalFilter.value)
   }
@@ -273,14 +287,6 @@ const paginatedSubmissions = computed(() => {
   const start = (subCurrentPage.value - 1) * subPerPage.value
   return filteredSubmissions.value.slice(start, start + subPerPage.value)
 })
-
-// const deleteSubmission = async (id) => {
-//   if (!confirm('Delete this submission?')) return
-//   try {
-//     await api.delete(`/submitted-papers/${id}`)
-//     await fetchSubmissions()
-//   } catch (err) { alert('Delete failed') }
-// }
 
 // ==================== Admin Approval / Rejection ====================
 const modalVisible = ref(false)
@@ -300,10 +306,10 @@ const openRejectModal = (sub) => {
   modalComment.value = ''
   modalVisible.value = true
 }
+// eslint-disable-next-line no-unused-vars
 const submitModalAction = async () => {
   if (!currentSubmission.value) return;
 
-  // For rejection, comment is required
   if (modalAction.value === 'reject' && !modalComment.value.trim()) {
     alert('Please provide a comment for rejection.');
     return;
@@ -334,6 +340,7 @@ const openCommentModal = (sub) => {
   commentModalVisible.value = true
 }
 
+// eslint-disable-next-line no-unused-vars
 const saveComment = async () => {
   if (!currentCommentSubmission.value) return
   try {
@@ -345,12 +352,24 @@ const saveComment = async () => {
   }
 }
 
+// ==================== Utility to remember tab after form navigation ====================
+const setReturnTab = () => {
+  localStorage.setItem('returnToSubmissions', 'true')
+}
+
 watch([pubSearch, subSearch, subApprovalFilter], () => {
   pubCurrentPage.value = 1
   subCurrentPage.value = 1
 })
 
 onMounted(async () => {
+  // Check if we came back from a submission edit/create
+  const returnTab = localStorage.getItem('returnToSubmissions')
+  if (returnTab === 'true') {
+    activeTab.value = 'submissions'
+    localStorage.removeItem('returnToSubmissions')
+  }
+
   await fetchPublishedPapers()
   await fetchSubmissions()
 })
@@ -374,7 +393,7 @@ onMounted(async () => {
 .table {
   border-radius: 12px;
   overflow: hidden;
-  font-size: 0.75rem;  /* increased from 0.6rem */
+  font-size: 0.75rem;
 }
 th, td {
   padding: 0.5rem 0.6rem;
@@ -421,6 +440,21 @@ td {
 .th-sub-approval { background: #adb5bd; }
 .th-sub-comment { background: #748ffc; }
 .th-sub-actions { background: #868e96; }
+
+/* ===== TAB HOVER & POINTER ===== */
+.nav-tabs .nav-link {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.nav-tabs .nav-link:hover {
+  background-color: rgba(13, 110, 253, 0.08);
+  border-color: #dee2e6 #dee2e6 #fff;
+}
+.nav-tabs .nav-link.active {
+  background-color: #4a85d0;
+  border-color: #dee2e6 #dee2e6 #fff;
+  cursor: default;
+}
 
 /* Pagination */
 .btn-secondary {

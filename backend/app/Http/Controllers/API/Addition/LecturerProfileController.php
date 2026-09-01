@@ -14,6 +14,7 @@ class LecturerProfileController extends Controller
 {
     public function index(Request $request)
     {
+        $universityId = currentUniversityId();
         $query = LecturerProfile::with([
             'faculty:id,facultyname',
             'department:id,deptname',
@@ -33,6 +34,11 @@ class LecturerProfileController extends Controller
             'academic_grade_entrence_date',
             'promotion_date'
         ]);
+        if ($universityId) {
+            $query->whereHas('faculty', function ($q) use ($universityId) {
+                $q->where('university_id', $universityId);
+            });
+        }
 
         // 🔍 Search across name, qualification, code_no
         if ($request->filled('name')) {
@@ -63,6 +69,7 @@ class LecturerProfileController extends Controller
 
     public function store(Request $request)
     {
+        $universityId = currentUniversityId();
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'father_name' => 'nullable|string|max:255',
@@ -82,6 +89,25 @@ class LecturerProfileController extends Controller
             'promotion_histories.*.promotion_date' => 'required|date',
             'promotion_histories.*.notes' => 'nullable|string',
         ]);
+
+        if ($universityId) {
+            if (isset($validated['faculty_id'])) {
+                $faculty = Faculty::where('id', $validated['faculty_id'])
+                    ->where('university_id', $universityId)
+                    ->first();
+                if (!$faculty) {
+                    return response()->json(['message' => 'Invalid faculty for this university'], 422);
+                }
+            }
+            if (isset($validated['department_id'])) {
+                $department = Department::where('id', $validated['department_id'])
+                    ->where('university_id', $universityId)
+                    ->first();
+                if (!$department) {
+                    return response()->json(['message' => 'Invalid department for this university'], 422);
+                }
+            }
+        }
 
         DB::transaction(function () use ($validated) {
             $profile = LecturerProfile::create([
@@ -115,12 +141,20 @@ class LecturerProfileController extends Controller
 
     public function show($id)
     {
+        $universityId = currentUniversityId();
         $profile = LecturerProfile::with(['faculty', 'department', 'promotionHistories'])->findOrFail($id);
+        if ($universityId) {
+            $faculty = $profile->faculty;
+            if (!$faculty || $faculty->university_id != $universityId) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+        }
         return response()->json($profile);
     }
 
     public function update(Request $request, $id)
     {
+        $universityId = currentUniversityId();
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'father_name' => 'nullable|string|max:255',
@@ -141,6 +175,32 @@ class LecturerProfileController extends Controller
             'promotion_histories.*.promotion_date' => 'required|date',
             'promotion_histories.*.notes' => 'nullable|string',
         ]);
+
+        if ($universityId) {
+            // Validate faculty and department if provided
+            if (isset($validated['faculty_id'])) {
+                $faculty = Faculty::where('id', $validated['faculty_id'])
+                    ->where('university_id', $universityId)
+                    ->first();
+                if (!$faculty) {
+                    return response()->json(['message' => 'Invalid faculty for this university'], 422);
+                }
+            }
+            if (isset($validated['department_id'])) {
+                $department = Department::where('id', $validated['department_id'])
+                    ->where('university_id', $universityId)
+                    ->first();
+                if (!$department) {
+                    return response()->json(['message' => 'Invalid department for this university'], 422);
+                }
+            }
+            // Also ensure the profile itself belongs to this university
+            $profile = LecturerProfile::findOrFail($id);
+            $faculty = $profile->faculty;
+            if (!$faculty || $faculty->university_id != $universityId) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+        }
 
         DB::transaction(function () use ($validated, $id) {
             $profile = LecturerProfile::findOrFail($id);
@@ -180,7 +240,14 @@ class LecturerProfileController extends Controller
 
     public function destroy($id)
     {
+        $universityId = currentUniversityId();
         $profile = LecturerProfile::findOrFail($id);
+        if ($universityId) {
+            $faculty = $profile->faculty;
+            if (!$faculty || $faculty->university_id != $universityId) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+        }
         DB::transaction(function () use ($profile) {
             $profile->promotionHistories()->delete();
             $profile->delete();
@@ -190,6 +257,7 @@ class LecturerProfileController extends Controller
 
     public function exportPdf(Request $request)
     {
+        $universityId = currentUniversityId();
         // Translation maps (same as before)
         $facultyTranslationMap = [
             'Computer Science' => 'کمپیوټر ساینس',
@@ -316,6 +384,12 @@ class LecturerProfileController extends Controller
             'qualification', 'course', 'domestic_international',
             'academic_grade_entrence_date', 'promotion_date'
         ]);
+
+        if ($universityId) {
+            $query->whereHas('faculty', function ($q) use ($universityId) {
+                $q->where('university_id', $universityId);
+            });
+        }
 
         // Apply filters (same as index)
         if ($request->filled('name')) {

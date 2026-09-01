@@ -135,11 +135,13 @@
       <table class="findings-table">
         <thead>
           <tr>
+            <th>#</th>
             <th v-for="col in displayColumns" :key="col.key">{{ col.label }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(row, idx) in paginatedData" :key="idx">
+            <td>{{ (page - 1) * perPage + idx + 1 }}</td>
             <td v-for="col in displayColumns" :key="col.key">
               {{ row[col.key] ?? '—' }}
             </td>
@@ -164,71 +166,83 @@
           </div>
         </div>
       </div>
-      <div v-if="gradeBreakdown.length" class="grade-breakdown">
-        <h4 class="summary-title">Grade Breakdown</h4>
-        <div class="summary-grid">
-          <div v-for="item in gradeBreakdown" :key="item.grade" class="summary-card">
-            <span class="summary-label">{{ item.grade }}</span>
-            <span class="summary-value">{{ item.count }}</span>
-            <span class="summary-total">/ {{ item.total }} records</span>
+      <div v-if="filteredData.length" class="summary-boxes">
+        <div v-if="gradeBreakdown.length" class="grade-breakdown">
+          <h4 class="summary-title">Grade Breakdown</h4>
+          <div class="summary-grid">
+            <div v-for="item in gradeBreakdown" :key="item.grade" class="summary-card">
+              <span class="summary-label">{{ item.grade }}</span>
+              <span class="summary-value">{{ item.count }}</span>
+              <span class="summary-total">/ {{ item.total }} records</span>
+            </div>
           </div>
         </div>
       </div>
       <!-- Education Breakdown -->
-      <div v-if="educationBreakdown.length" class="education-breakdown">
-        <h4 class="summary-title">Education Breakdown</h4>
-        <div class="summary-grid">
-          <div v-for="item in educationBreakdown" :key="item.education" class="summary-card">
-            <span class="summary-label">{{ item.education }}</span>
-            <span class="summary-value">{{ item.count }}</span>
-            <span class="summary-total">/ {{ item.total }} records</span>
+      <div v-if="filteredData.length" class="summary-boxes">
+        <div v-if="educationBreakdown.length" class="education-breakdown">
+          <h4 class="summary-title">Education Breakdown</h4>
+          <div class="summary-grid">
+            <div v-for="item in educationBreakdown" :key="item.education" class="summary-card">
+              <span class="summary-label">{{ item.education }}</span>
+              <span class="summary-value">{{ item.count }}</span>
+              <span class="summary-total">/ {{ item.total }} records</span>
+            </div>
           </div>
         </div>
       </div>
       <!-- Publication Type Breakdown -->
-      <div v-if="publicationTypeBreakdown.length" class="breakdown-section">
-        <h4 class="summary-title">Publication Type Breakdown</h4>
-        <div class="summary-grid">
-          <div v-for="item in publicationTypeBreakdown" :key="item.type" class="summary-card">
-            <span class="summary-label">{{ item.type }}</span>
-            <span class="summary-value">{{ item.count }}</span>
-            <span class="summary-total">/ {{ item.total }} records</span>
+      <div v-if="filteredData.length" class="summary-boxes">
+        <div v-if="publicationTypeBreakdown.length" class="breakdown-section">
+          <h4 class="summary-title">Publication Type Breakdown</h4>
+          <div class="summary-grid">
+            <div v-for="item in publicationTypeBreakdown" :key="item.type" class="summary-card">
+              <span class="summary-label">{{ item.type }}</span>
+              <span class="summary-value">{{ item.count }}</span>
+              <span class="summary-total">/ {{ item.total }} records</span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Index Breakdown -->
-      <div v-if="indexBreakdown.length" class="breakdown-section">
-        <h4 class="summary-title">Index Breakdown</h4>
-        <div class="summary-grid">
-          <div v-for="item in indexBreakdown" :key="item.index" class="summary-card">
-            <span class="summary-label">{{ item.index }}</span>
-            <span class="summary-value">{{ item.count }}</span>
-            <span class="summary-total">/ {{ item.total }} records</span>
+      <div v-if="filteredData.length" class="summary-boxes">
+        <div v-if="indexBreakdown.length" class="breakdown-section">
+          <h4 class="summary-title">Index Breakdown</h4>
+          <div class="summary-grid">
+            <div v-for="item in indexBreakdown" :key="item.index" class="summary-card">
+              <span class="summary-label">{{ item.index }}</span>
+              <span class="summary-value">{{ item.count }}</span>
+              <span class="summary-total">/ {{ item.total }} records</span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Language Breakdown -->
-      <div v-if="languageBreakdown.length" class="breakdown-section">
-        <h4 class="summary-title">Language Breakdown</h4>
-        <div class="summary-grid">
-          <div v-for="item in languageBreakdown" :key="item.language" class="summary-card">
-            <span class="summary-label">{{ item.language }}</span>
-            <span class="summary-value">{{ item.count }}</span>
-            <span class="summary-total">/ {{ item.total }} records</span>
+      <div v-if="filteredData.length" class="summary-boxes">
+        <div v-if="languageBreakdown.length" class="breakdown-section">
+          <h4 class="summary-title">Language Breakdown</h4>
+          <div class="summary-grid">
+            <div v-for="item in languageBreakdown" :key="item.language" class="summary-card">
+              <span class="summary-label">{{ item.language }}</span>
+              <span class="summary-value">{{ item.count }}</span>
+              <span class="summary-total">/ {{ item.total }} records</span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Collaboration Breakdown -->
-      <div v-if="collaborationBreakdown.length" class="breakdown-section">
-        <h4 class="summary-title">Collaboration Breakdown</h4>
-        <div class="summary-grid">
-          <div v-for="item in collaborationBreakdown" :key="item.collaboration" class="summary-card">
-            <span class="summary-label">{{ item.collaboration }}</span>
-            <span class="summary-value">{{ item.count }}</span>
-            <span class="summary-total">/ {{ item.total }} records</span>
+      <div v-if="filteredData.length" class="summary-boxes">
+        <div v-if="collaborationBreakdown.length" class="breakdown-section">
+          <h4 class="summary-title">Collaboration Breakdown</h4>
+          <div class="summary-grid">
+            <div v-for="item in collaborationBreakdown" :key="item.collaboration" class="summary-card">
+              <span class="summary-label">{{ item.collaboration }}</span>
+              <span class="summary-value">{{ item.count }}</span>
+              <span class="summary-total">/ {{ item.total }} records</span>
+            </div>
           </div>
         </div>
       </div>
@@ -245,6 +259,7 @@ const researcherName = ref('')
 
 // ---------- Column Definitions ----------
 const columns = [
+  { key: 'title', label: 'Title' }, 
   { key: 'researcher_name', label: 'Researcher Name' },
   { key: 'faculty', label: 'Faculty' },
   { key: 'department', label: 'Department' },
@@ -258,6 +273,7 @@ const columns = [
   { key: 'collaboration', label: 'Collaboration' },
   { key: 'author_position', label: 'Author Position' },
   { key: 'research_area', label: 'Research Area' },
+  { key: 'language', label: 'Language' },
 ]
 
 const columnOptions = columns.map(col => ({ value: col.key, text: col.label }))
@@ -377,9 +393,12 @@ async function applyFilters() {
         params[key] = values.map(v => v.value)
       }
     }
-    const res = await api.get('/key-findings', { params })
-    allData.value = res.data
-    filteredData.value = allData.value
+    const res = await api.get('/key-findings', { params });
+    allData.value = res.data.map(row => ({
+      ...row,
+      author_position: normalizeAuthorPosition(row.author_position)
+    }));
+    filteredData.value = allData.value;
   } catch (error) {
     console.error('Failed to fetch data', error)
   } finally {
@@ -399,6 +418,12 @@ function resetFilters() {
   filteredData.value = []
   page.value = 1
 }
+
+const normalizeAuthorPosition = (pos) => {
+  if (!pos) return pos;
+  const match = pos.match(/^(\d+)(st|nd|rd|th)?$/i);
+  return match ? match[1] : pos;
+};
 
 // Add this inside <script setup>, after displayColumns
   const columnSummaries = computed(() => {
@@ -488,15 +513,20 @@ const indexBreakdown = computed(() => {
 
 const languageBreakdown = computed(() => {
   if (!filteredData.value.length) return [];
+
+  // Normalise language names: lowercase them and then capitalise
   const counts = {};
   filteredData.value.forEach(row => {
     const val = row.language;
     if (val && val !== '' && val !== '—' && val !== null && val !== undefined) {
-      counts[val] = (counts[val] || 0) + 1;
+      const normalised = val.toLowerCase(); // e.g., "pashto", "english"
+      counts[normalised] = (counts[normalised] || 0) + 1;
     }
   });
+
+  // Convert to display format: capitalise first letter
   return Object.entries(counts).map(([lang, count]) => ({
-    language: lang,
+    language: lang.charAt(0).toUpperCase() + lang.slice(1), // "Pashto", "English"
     count,
     total: filteredData.value.length,
   }));
@@ -613,6 +643,7 @@ async function exportPdf() {
   border: 1px solid #d4c9bc;
   border-radius: 8px;
   background: #fefcf9;
+  font-size: 12px;
 }
 .multiselect-custom .multiselect__tags {
   border: none;

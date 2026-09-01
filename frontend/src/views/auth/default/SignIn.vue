@@ -57,7 +57,7 @@
                   </button>
                 </div>
 
-                <!-- Register link (optional) -->
+                <!-- Register link -->
                 <p class="mt-4 text-center text-muted">
                   Don't have an account?
                   <router-link :to="{ name: 'auth.user-register' }" class="text-primary fw-medium text-decoration-none">
@@ -115,9 +115,18 @@ async function guestLogin() {
   error.value = null;
   try {
     await authStore.guestLogin();
-    router.push({ name: 'default.dashboard' });
+    // Small delay to ensure session is fully set
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const user = authStore.user;
+    if (user?.university_id) {
+      router.push({ name: 'default.dashboard' });
+    } else {
+      router.push({ name: 'university-selector' });
+    }
   } catch (err) {
-    error.value = authStore.error || 'Guest login failed.';
+    // Log the actual error for debugging
+    console.error('Guest login error:', err);
+    error.value = authStore.error || 'Guest login failed. Please try again.';
   }
 }
 </script>

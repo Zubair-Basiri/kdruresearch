@@ -165,19 +165,19 @@ const defaultChildRoutes = (prefix) => [
   {
     path: 'user-list',
     name: 'default.user-list',
-    meta: { auth: true, role: ['super_admin'], name: 'User List' },
+    meta: { auth: true, role: ['ministry_authority','super_admin'], name: 'User List' },
     component: () => import('@/views/user/ListPage.vue')
   },
   {
     path: 'user-add',
     name: 'default.user-add',
-    meta: { auth: true, role: ['super_admin'], name: 'User Add', isBanner: true },
+    meta: { auth: true, role: ['ministry_authority','super_admin'], name: 'User Add', isBanner: true },
     component: () => import('@/views/user/AddPage.vue')
   },
   {
     path: 'user-edit/:id',
     name: 'default.user-edit',
-    meta: { auth: true, role: ['super_admin'], name: 'User Edit', isBanner: true },
+    meta: { auth: true, role: ['ministry_authority','super_admin'], name: 'User Edit', isBanner: true },
     component: () => import('@/views/user/AddPage.vue')
   },
   {
@@ -223,6 +223,12 @@ const routes = [
     children: defaultChildRoutes('default')
   },
   {
+    path: '/university-selector',
+    name: 'university-selector',
+    component: () => import('@/views/auth/UniversitySelector.vue'),
+    meta: { auth: true }, // Requires authentication
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     meta: { auth: true },
@@ -242,7 +248,7 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
   // Fetch user if not loaded
-  if (authStore.user === null && !authStore.loading) {
+  if (!authStore.isAuthenticated && authStore.user === null && !authStore.loading) {
     await authStore.fetchUser();
   }
 
@@ -262,7 +268,24 @@ router.beforeEach(async (to, from, next) => {
         next({ name: 'lecturerProfiles' });
         return;
     }
-}
+  }
+
+  // Guest university selection check
+  if (authStore.isAuthenticated && authStore.isGuest) {
+    // If trying to access any protected route without university_id, redirect to selector
+    if (requiresAuth && !authStore.user?.university_id) {
+      // Allow access only to the university-selector route itself
+      if (to.name !== 'university-selector') {
+        next({ name: 'university-selector' });
+        return;
+      }
+    }
+    // If has university and trying to access university-selector, go to dashboard
+    if (authStore.user?.university_id && to.name === 'university-selector') {
+      next({ name: 'default.dashboard' });
+      return;
+    }
+  }
 
   // If route requires auth and user is not authenticated
   if (requiresAuth && !authStore.isAuthenticated) {

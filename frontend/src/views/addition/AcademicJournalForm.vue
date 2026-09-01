@@ -189,10 +189,10 @@
                   <label class="form-label form-title">Author Position</label>
                   <select v-model="form.author_position" class="form-select form-field">
                     <option value="">Select Position</option>
-                    <option value="1st">1st</option>
-                    <option value="2nd">2nd</option>
-                    <option value="3rd">3rd</option>
-                    <option value="4th">4th</option>
+                    <option value="1">1st</option>
+                    <option value="2">2nd</option>
+                    <option value="3">3rd</option>
+                    <option value="4">4th</option>
                   </select>
                 </div>
               </div>

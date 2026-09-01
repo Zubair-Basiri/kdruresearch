@@ -13,20 +13,103 @@ class KeyFindingsController extends Controller
     // Add this method to the existing filters() method
     public function filters()
     {
+        $universityId = currentUniversityId();
+
+        // Faculties – filter by university if not null
+        $facultiesQuery = DB::table('faculties')
+            ->orderBy('facultyname');
+        if ($universityId) {
+            $facultiesQuery->where('university_id', $universityId);
+        }
+        $faculties = $facultiesQuery->pluck('facultyname', 'id');
+
+        // Departments – filter by university via faculty
+        $departmentsQuery = DB::table('departments')
+            ->join('faculties', 'departments.faculty_id', '=', 'faculties.id')
+            ->orderBy('departments.deptname');
+        if ($universityId) {
+            $departmentsQuery->where('faculties.university_id', $universityId);
+        }
+        $departments = $departmentsQuery->pluck('departments.deptname', 'departments.id');
+
+        // Lecturers – filter by university
+        $lecturersQuery = DB::table('lecturers')
+            ->orderBy('lecturername');
+        if ($universityId) {
+            $lecturersQuery->where('university_id', $universityId);
+        }
+        $lecturers = $lecturersQuery;
+
+        // Grades (distinct)
+        $grades = (clone $lecturersQuery)->distinct()->orderBy('grade')->pluck('grade');
+
+        // Qualifications (distinct)
+        $qualifications = (clone $lecturersQuery)->distinct()->orderBy('qualification')->pluck('qualification');
+
+        // Researcher names
+        $researcherNames = (clone $lecturersQuery)->orderBy('lecturername')->pluck('lecturername');
+
+        // Research areas – from lecturers, filtered by university
+        $areas = DB::table('lecturers')
+            ->whereNotNull('specialized_area')
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->where('university_id', $universityId);
+            })
+            ->pluck('specialized_area');
+
+        $uniqueAreas = [];
+        foreach ($areas as $areaJson) {
+            $arr = json_decode($areaJson, true) ?: [];
+            foreach ($arr as $item) {
+                $uniqueAreas[trim($item)] = true;
+            }
+        }
+        ksort($uniqueAreas);
+        $researchAreas = array_keys($uniqueAreas);
+
+        // Academic papers – filter by university via lecturer
+        $papersQuery = DB::table('academic_papers')
+            ->join('lecturers', 'academic_papers.lecturer_id', '=', 'lecturers.id')
+            ->join('faculties', 'lecturers.faculty_id', '=', 'faculties.id')
+            ->when($universityId, function ($q) use ($universityId) {
+                return $q->where('faculties.university_id', $universityId);
+            });
+
+        // Years (distinct, descending)
+        $years = (clone $papersQuery)->distinct()->orderBy('academic_papers.year', 'desc')->pluck('academic_papers.year');
+
+        // Publication types
+        $publicationTypes = (clone $papersQuery)->distinct()->orderBy('academic_papers.publication')->pluck('academic_papers.publication');
+
+        // Indexes
+        $indexes = (clone $papersQuery)->distinct()->orderBy('academic_papers.indexed')->pluck('academic_papers.indexed');
+
+        // Funding sources
+        $fundingSources = (clone $papersQuery)->distinct()->orderBy('academic_papers.funding')->pluck('academic_papers.funding');
+
+        // Statuses
+        $statuses = (clone $papersQuery)->distinct()->orderBy('academic_papers.status')->pluck('academic_papers.status');
+
+        // Collaborations
+        $collaborations = (clone $papersQuery)->distinct()->orderBy('academic_papers.collaboration')->pluck('academic_papers.collaboration');
+
+        // Author positions
+        $authorPositions = (clone $papersQuery)->distinct()->orderBy('academic_papers.author_position')->pluck('academic_papers.author_position');
+
         return response()->json([
-            'faculties'       => DB::table('faculties')->orderBy('facultyname')->pluck('facultyname', 'id'),
-            'departments'     => DB::table('departments')->orderBy('deptname')->pluck('deptname', 'id'),
-            'grades'          => DB::table('lecturers')->distinct()->orderBy('grade')->pluck('grade'),
-            'qualifications'  => DB::table('lecturers')->distinct()->orderBy('qualification')->pluck('qualification'),
-            'years'           => DB::table('academic_papers')->distinct()->orderBy('year', 'desc')->pluck('year'),
-            'publication_types' => DB::table('academic_papers')->distinct()->orderBy('publication')->pluck('publication'),
-            'indexes'         => DB::table('academic_papers')->distinct()->orderBy('indexed')->pluck('indexed'),
-            'funding_sources' => DB::table('academic_papers')->distinct()->orderBy('funding')->pluck('funding'),
-            'statuses'        => DB::table('academic_papers')->distinct()->orderBy('status')->pluck('status'),
-            'collaborations'  => DB::table('academic_papers')->distinct()->orderBy('collaboration')->pluck('collaboration'),
-            'author_positions'=> DB::table('academic_papers')->distinct()->orderBy('author_position')->pluck('author_position'),
-            'research_areas'  => $this->getDistinctResearchAreas(),
-            'researcher_names' => DB::table('lecturers')->orderBy('lecturername')->pluck('lecturername'), // NEW
+            'faculties'       => $faculties,
+            'departments'     => $departments,
+            'grades'          => $grades,
+            'qualifications'  => $qualifications,
+            'years'           => $years,
+            'publication_types' => $publicationTypes,
+            'indexes'         => $indexes,
+            'funding_sources' => $fundingSources,
+            'statuses'        => $statuses,
+            'collaborations'  => $collaborations,
+            'author_positions'=> $authorPositions,
+            'research_areas'  => $researchAreas,
+            'researcher_names' => $researcherNames,
         ]);
     }
 
@@ -39,6 +122,7 @@ class KeyFindingsController extends Controller
             ->join('departments', 'lecturers.department_id', '=', 'departments.id')
             ->select(
                 'lecturers.lecturername as researcher_name',
+                'academic_papers.title as title',
                 'faculties.facultyname as faculty',
                 'departments.deptname as department',
                 'lecturers.grade',
@@ -50,8 +134,14 @@ class KeyFindingsController extends Controller
                 'academic_papers.status',
                 'academic_papers.collaboration',
                 'academic_papers.author_position',
-                'lecturers.specialized_area as research_area'
+                'lecturers.specialized_area as research_area',
+                'academic_papers.language as language'
             );
+
+        $universityId = currentUniversityId();
+        if ($universityId) {
+            $query->where('faculties.university_id', $universityId);
+        }
 
         // Year range
         if ($request->filled('start_year')) {
@@ -120,11 +210,8 @@ class KeyFindingsController extends Controller
     // Add PDF preview method
     public function previewPdf(Request $request)
     {
-        // Create a new request with the same parameters, converting comma‑separated
-        // multi‑select values into arrays.
+        // 1. Convert comma-separated multi-select values into arrays (unchanged)
         $convertedParams = [];
-
-        // Copy simple parameters
         if ($request->filled('start_year')) {
             $convertedParams['start_year'] = $request->start_year;
         }
@@ -135,42 +222,31 @@ class KeyFindingsController extends Controller
             $convertedParams['researcher_name'] = $request->researcher_name;
         }
 
-        // List of filter keys that accept multiple values
         $multiSelectKeys = [
             'faculty', 'department', 'grade', 'qualification', 'publication_type',
             'index', 'funding', 'status', 'collaboration', 'author_position', 'research_area'
         ];
-
         foreach ($multiSelectKeys as $key) {
             if ($request->filled($key)) {
                 $value = $request->input($key);
-                // Convert comma‑separated string to array
-                if (is_string($value)) {
-                    $convertedParams[$key] = explode(',', $value);
-                } else {
-                    $convertedParams[$key] = $value;
-                }
+                $convertedParams[$key] = is_string($value) ? explode(',', $value) : $value;
             }
         }
 
-        // Build the new request
         $internalRequest = new Request($convertedParams);
-
-        // Get the data using the index method (which now receives proper arrays)
         $data = $this->index($internalRequest)->getData(true);
 
         if (empty($data)) {
             return response("No data matching the filters", 404);
         }
 
-        // Selected columns (may be a comma‑separated string)
+        // 2. Prepare columns and rows (unchanged)
         $selectedColumns = $request->input('selected_columns', []);
         if (is_string($selectedColumns)) {
             $selectedColumns = array_filter(explode(',', $selectedColumns));
         }
-
-        // All possible column keys and their labels
         $allColumns = [
+            'title' => 'Title',
             'researcher_name' => 'Researcher Name',
             'faculty' => 'Faculty',
             'department' => 'Department',
@@ -185,13 +261,9 @@ class KeyFindingsController extends Controller
             'author_position' => 'Author Position',
             'research_area' => 'Research Area',
         ];
-
-        // If no columns selected, use all
         if (empty($selectedColumns)) {
             $selectedColumns = array_keys($allColumns);
         }
-
-        // Build columns array
         $columns = [];
         foreach ($selectedColumns as $colKey) {
             if (isset($allColumns[$colKey])) {
@@ -199,7 +271,6 @@ class KeyFindingsController extends Controller
             }
         }
 
-        // Prepare table rows
         $rows = [];
         foreach ($data as $item) {
             $row = [];
@@ -213,13 +284,12 @@ class KeyFindingsController extends Controller
             $rows[] = $row;
         }
 
-        // Hijri Shamsi date with Pashto numerals
+        // 3. Date, filter summary, breakdowns (unchanged – keep all your existing breakdown calculations)
         date_default_timezone_set('Asia/Kabul');
         $verta = new \Hekmatinasser\Verta\Verta();
         $shamsi = $verta->format('Y-m-d');
         $pashtoDate = $this->toPashtoNumbers($shamsi);
 
-        // Filter summary
         $filtersSummary = [];
         if ($request->filled('start_year') || $request->filled('end_year')) {
             $start = $request->start_year ?? 'any';
@@ -230,11 +300,10 @@ class KeyFindingsController extends Controller
             $filtersSummary[] = "Researcher: " . $request->researcher_name;
         }
 
-        // Column summaries (unique counts per selected column)
+        // Column summaries
         $columnSummaries = [];
         foreach (array_keys($columns) as $colKey) {
             $values = array_column($data, $colKey);
-            // Filter out empty/null/—
             $filtered = array_filter($values, fn($v) => $v !== null && $v !== '' && $v !== '—');
             $unique = count(array_unique($filtered));
             $columnSummaries[] = [
@@ -254,14 +323,10 @@ class KeyFindingsController extends Controller
         }
         $gradeBreakdown = [];
         foreach ($gradeCounts as $grade => $count) {
-            $gradeBreakdown[] = [
-                'grade' => $grade,
-                'count' => $count,
-                'total' => count($data),
-            ];
+            $gradeBreakdown[] = ['grade' => $grade, 'count' => $count, 'total' => count($data)];
         }
 
-        // Education breakdown (qualification)
+        // Education breakdown
         $eduCounts = [];
         foreach ($data as $row) {
             $edu = $row['education'] ?? null;
@@ -271,12 +336,9 @@ class KeyFindingsController extends Controller
         }
         $educationBreakdown = [];
         foreach ($eduCounts as $edu => $count) {
-            $educationBreakdown[] = [
-                'education' => $edu,
-                'count' => $count,
-                'total' => count($data),
-            ];
+            $educationBreakdown[] = ['education' => $edu, 'count' => $count, 'total' => count($data)];
         }
+
         // Publication Type breakdown
         $pubTypeCounts = [];
         foreach ($data as $row) {
@@ -287,11 +349,7 @@ class KeyFindingsController extends Controller
         }
         $publicationTypeBreakdown = [];
         foreach ($pubTypeCounts as $type => $count) {
-            $publicationTypeBreakdown[] = [
-                'type' => $type,
-                'count' => $count,
-                'total' => count($data),
-            ];
+            $publicationTypeBreakdown[] = ['type' => $type, 'count' => $count, 'total' => count($data)];
         }
 
         // Index breakdown
@@ -304,11 +362,7 @@ class KeyFindingsController extends Controller
         }
         $indexBreakdown = [];
         foreach ($indexCounts as $index => $count) {
-            $indexBreakdown[] = [
-                'index' => $index,
-                'count' => $count,
-                'total' => count($data),
-            ];
+            $indexBreakdown[] = ['index' => $index, 'count' => $count, 'total' => count($data)];
         }
 
         // Language breakdown
@@ -321,11 +375,7 @@ class KeyFindingsController extends Controller
         }
         $languageBreakdown = [];
         foreach ($langCounts as $lang => $count) {
-            $languageBreakdown[] = [
-                'language' => $lang,
-                'count' => $count,
-                'total' => count($data),
-            ];
+            $languageBreakdown[] = ['language' => $lang, 'count' => $count, 'total' => count($data)];
         }
 
         // Collaboration breakdown
@@ -338,17 +388,12 @@ class KeyFindingsController extends Controller
         }
         $collaborationBreakdown = [];
         foreach ($collabCounts as $collab => $count) {
-            $collaborationBreakdown[] = [
-                'collaboration' => $collab,
-                'count' => $count,
-                'total' => count($data),
-            ];
+            $collaborationBreakdown[] = ['collaboration' => $collab, 'count' => $count, 'total' => count($data)];
         }
 
-        // Render view
-        $html = view('pdf.key-findings', [
+        // Common data for views (unchanged)
+        $commonViewData = [
             'columns'            => array_values($columns),
-            'rows'               => $rows,
             'date'               => $pashtoDate,
             'filterSummary'      => implode(' | ', $filtersSummary),
             'totalRecords'       => count($data),
@@ -359,9 +404,9 @@ class KeyFindingsController extends Controller
             'indexBreakdown'           => $indexBreakdown,
             'languageBreakdown'        => $languageBreakdown,
             'collaborationBreakdown'   => $collaborationBreakdown,
-        ])->render();
+        ];
 
-        // mPDF configuration
+        // 4. Setup mPDF (unchanged)
         $mpdf = new \Mpdf\Mpdf([
             'mode' => 'utf-8',
             'format' => 'A4-L',
@@ -381,7 +426,58 @@ class KeyFindingsController extends Controller
             'directionality' => 'rtl',
         ]);
 
-        $mpdf->WriteHTML($html);
+        // ===== 5. RENDER IN CORRECT ORDER =====
+
+        $headerViewData = array_merge($commonViewData, [
+            'skipHeader'      => false,
+            'skipTable'       => true,
+            'skipBreakdowns'  => true,
+            'skipFooter'      => true,
+        ]);
+        $htmlHeader = view('pdf.key-findings', $headerViewData)->render();
+        $mpdf->WriteHTML($htmlHeader);
+
+        // 5b. Table opening + thead (once)
+        $theadHtml = view('pdf.key-findings-table-head', ['columns' => array_values($columns)])->render();
+        $mpdf->WriteHTML($theadHtml);
+
+        // 5c. Open tbody (once)
+        $mpdf->WriteHTML('<tbody>');
+
+        // 5d. Table rows – process in chunks (only <tr> rows)
+        $chunkSize = 500;
+        $rowChunks = array_chunk($rows, $chunkSize);
+        foreach ($rowChunks as $chunk) {
+            $rowsHtml = view('pdf.key-findings-rows', [
+                'rows' => $chunk,
+            ])->render();
+            $mpdf->WriteHTML($rowsHtml);
+        }
+
+        // 5e. Close tbody and table (once)
+        $mpdf->WriteHTML('</tbody></table>');
+
+        // 5f. Breakdowns (once, skip header)
+        $breakdownViewData = array_merge($commonViewData, [
+            'skipHeader'      => true,
+            'skipTable'       => true,
+            'skipBreakdowns'  => false,
+            'skipFooter'      => true,
+        ]);
+        $htmlBreakdowns = view('pdf.key-findings', $breakdownViewData)->render();
+        $mpdf->WriteHTML($htmlBreakdowns);
+
+        // 5g. Footer (once, skip everything except footer)
+        $footerViewData = array_merge($commonViewData, [
+            'skipHeader'      => true,
+            'skipTable'       => true,
+            'skipBreakdowns'  => true,
+            'skipFooter'      => false,
+        ]);
+        $htmlFooter = view('pdf.key-findings', $footerViewData)->render();
+        $mpdf->WriteHTML($htmlFooter);
+
+        // 6. Output PDF (unchanged)
         return response($mpdf->Output('key-findings.pdf', 'I'), 200)
             ->header('Content-Type', 'application/pdf');
     }

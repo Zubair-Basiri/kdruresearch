@@ -5,7 +5,11 @@
       <!-- Header -->
       <div class="card-header table-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0 text-white fw-semibold">Faculty Table</h6>
-        <button class="btn btn-add btn-sm" @click="openAddModal">
+        <button 
+          v-if="authStore.canManageUniversityData"
+          class="btn btn-add btn-sm" 
+          @click="openAddModal"
+        >
           <i class="bi bi-plus-circle me-1"></i> Add
         </button>
       </div>
@@ -47,12 +51,10 @@
                 <td>{{ f.facultyname }}</td>
                 <td>{{ f.university?.name }}</td>
                 <td class="text-center">
-                  <button class="btn btn-sm btn-warning me-2" @click="openEditModal(f)">
-                    Edit
-                  </button>
-                  <button class="btn btn-sm btn-danger" @click="deleteFaculty(f)">
-                    Delete
-                  </button>
+                  <template v-if="authStore.canManageUniversityData">
+                    <button class="btn btn-sm btn-warning me-2" @click="openEditModal(f)">Edit</button>
+                    <button class="btn btn-sm btn-danger" @click="deleteFaculty(f)">Delete</button>
+                  </template>
                 </td>
               </tr>
 
@@ -115,6 +117,9 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import bootstrap from 'bootstrap/dist/js/bootstrap.bundle'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 
 const faculties = ref([])
 const universities = ref([])

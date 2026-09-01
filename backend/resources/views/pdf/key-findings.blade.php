@@ -100,103 +100,113 @@
             text-align: center;
             clear: both;
         }
+        .findings-table td:first-child {
+            max-width: 200px;
+            white-space: normal;
+            word-break: break-word;
+        }
     </style>
 </head>
 <body>
 
-<table class="header-table" style="width:100%;">
-    <tr>
-        <td style="width:30%; text-align:right;">
-            <img src="{{ public_path('images/KDRU_LOGO.png') }}" style="width:85px; margin-bottom:10px;">
-            <div class="header-meta"><strong>نیټه:</strong> {{ $date }}</div>
-        </td>
-        <td style="width:40%; text-align:center;">
-            <div class="uni-name-ps">د افغانستان اسلامی امارت</div>
-            <div class="uni-name-ps uni-sub">د لوړو زده کړو وزارت</div>
-            <div class="uni-name-ps uni-sub">کندهار پوهنتون</div>
-            <div class="uni-name-ps uni-sub" style="font-size:14px;">د علمی څیړنو معاونیت</div>
-        </td>
-        <td style="width:30%; text-align:left;">
-            <img src="{{ public_path('images/Vice_Logo.png') }}" style="width:85px; margin-bottom:10px;">
-            <div class="header-meta"><strong>REF NO:</strong> KU-RES-{{ date('Y') }}-{{ rand(100,999) }}</div>
-        </td>
-    </tr>
-</table>
+@if(!isset($skipHeader) || !$skipHeader)
+    <table class="header-table" style="width:100%;">
+        <tr>
+            <td style="width:30%; text-align:right;">
+                <img src="{{ public_path('images/KDRU_LOGO.png') }}" style="width:85px; margin-bottom:10px;">
+                <div class="header-meta"><strong>نیټه:</strong> {{ $date }}</div>
+            </td>
+            <td style="width:40%; text-align:center;">
+                <div class="uni-name-ps">د افغانستان اسلامی امارت</div>
+                <div class="uni-name-ps uni-sub">د لوړو زده کړو وزارت</div>
+                <div class="uni-name-ps uni-sub">کندهار پوهنتون</div>
+                <div class="uni-name-ps uni-sub" style="font-size:14px;">د علمی څیړنو معاونیت</div>
+            </td>
+            <td style="width:30%; text-align:left;">
+                <img src="{{ public_path('images/Vice_Logo.png') }}" style="width:85px; margin-bottom:10px;">
+                <div class="header-meta"><strong>REF NO:</strong> KU-RES-{{ date('Y') }}-{{ rand(100,999) }}</div>
+            </td>
+        </tr>
+    </table>
 
-<div class="report-title-container">
-    <div class="report-title">Key Research Findings</div>
-    <div class="metric-subtext">
-        Based on applied filters and selected columns
+    <div class="report-title-container">
+        <div class="report-title">Key Research Findings</div>
+        <div class="metric-subtext">
+            Based on applied filters and selected columns
+        </div>
     </div>
-</div>
+@endif
 
-<table class="academic-table">
-    <thead>
-        <tr>
-            @foreach($columns as $col)
-                <th>{{ $col }}</th>
-            @endforeach
-        </tr>
-    </thead>
-    <tbody>
-        @forelse($rows as $row)
-        <tr>
-            @foreach($row as $cell)
-                <td>{{ $cell }}</td>
-            @endforeach
-        </tr>
-        @empty
-        <tr><td colspan="{{ count($columns) }}" style="text-align:center;">No data found</td></tr>
-        @endforelse
-    </tbody>
-</table>
+<!-- ===== TABLE – conditionally included ===== -->
+@if(!isset($skipTable) || !$skipTable)
+    <table class="academic-table">
+        <thead>
+            <tr>
+                @foreach($columns as $col)
+                    <th>{{ $col }}</th>
+                @endforeach
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($rows as $row)
+            <tr>
+                @foreach($row as $cell)
+                    <td>{{ $cell }}</td>
+                @endforeach
+            </tr>
+            @empty
+            <tr><td colspan="{{ count($columns) }}" style="text-align:center;">No data found</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+@endif
 
-    <!-- ===== BREAKDOWN SECTIONS ===== -->
-<!-- ===== BREAKDOWN SECTIONS ===== -->
+<!-- ===== BREAKDOWNS – conditionally included ===== -->
+@if(!isset($skipBreakdowns) || !$skipBreakdowns)
+    @php
+        function renderBreakdown($items, $labelKey, $title, $recordCount)
+        {
+            if (empty($items)) return '';
 
-<!-- Helper to render a breakdown as a grid of small boxes -->
-@php
-    function renderBreakdown($items, $labelKey, $title, $recordCount)
-    {
-        if (empty($items)) return '';
+            $html = '<div style="margin-top: 20px; padding: 12px 16px; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden;">';
+            $html .= '<h4 style="font-size: 13px; font-weight: 700; color: #1F4E79; margin: 0 0 10px 0; border-left: 3px solid #1F4E79; padding-left: 10px; text-align: left;">' . $title . '</h4>';
+            $html .= '<div style="overflow: hidden;">';
 
-        $html = '<div style="margin-top: 20px; padding: 12px 16px; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden;">';
-        $html .= '<h4 style="font-size: 13px; font-weight: 700; color: #1F4E79; margin: 0 0 10px 0; border-left: 3px solid #1F4E79; padding-left: 10px; text-align: left;">' . $title . '</h4>';
-        $html .= '<div style="overflow: hidden;">'; // clearfix
+            $count = 0;
+            $totalItems = count($items);
+            foreach ($items as $item) {
+                $label = $item[$labelKey] ?? '';
+                $countVal = $item['count'] ?? 0;
+                $total = $item['total'] ?? $recordCount;
 
-        $count = 0;
-        $totalItems = count($items);
-        foreach ($items as $item) {
-            $label = $item[$labelKey] ?? '';
-            $countVal = $item['count'] ?? 0;
-            $total = $item['total'] ?? $recordCount;
+                $marginRight = ($count % 5 == 4 || $count == $totalItems - 1) ? '0' : '2%';
 
-            // Remove right margin on the last item of each row (every 5th item or the very last)
-            $marginRight = ($count % 5 == 4 || $count == $totalItems - 1) ? '0' : '2%';
+                $html .= '<div style="float: left; width: 18%; margin-right: ' . $marginRight . '; margin-bottom: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 6px; text-align: center;">';
+                $html .= '<div style="font-size: 8px; text-transform: uppercase; color: #4a5568; letter-spacing: 0.3px;">' . htmlspecialchars($label) . '</div>';
+                $html .= '<div style="font-size: 16px; font-weight: 700; color: #1F4E79; margin: 2px 0;">' . $countVal . '</div>';
+                $html .= '<div style="font-size: 8px; color: #718096;">/ ' . $total . ' records</div>';
+                $html .= '</div>';
 
-            $html .= '<div style="float: left; width: 18%; margin-right: ' . $marginRight . '; margin-bottom: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 6px; text-align: center;">';
-            $html .= '<div style="font-size: 8px; text-transform: uppercase; color: #4a5568; letter-spacing: 0.3px;">' . htmlspecialchars($label) . '</div>';
-            $html .= '<div style="font-size: 16px; font-weight: 700; color: #1F4E79; margin: 2px 0;">' . $countVal . '</div>';
-            $html .= '<div style="font-size: 8px; color: #718096;">/ ' . $total . ' records</div>';
+                $count++;
+            }
+
             $html .= '</div>';
-
-            $count++;
+            $html .= '</div>';
+            return $html;
         }
+    @endphp
 
-        $html .= '</div>'; // end clearfix
-        $html .= '</div>'; // end card
-        return $html;
-    }
-@endphp
+    {!! renderBreakdown($columnSummaries, 'label', 'Unique Values per Column', $totalRecords) !!}
+    {!! renderBreakdown($gradeBreakdown, 'grade', 'Grade Breakdown', $totalRecords) !!}
+    {!! renderBreakdown($educationBreakdown, 'education', 'Education Breakdown', $totalRecords) !!}
+    {!! renderBreakdown($publicationTypeBreakdown, 'type', 'Publication Type Breakdown', $totalRecords) !!}
+    {!! renderBreakdown($indexBreakdown, 'index', 'Index Breakdown', $totalRecords) !!}
+    {!! renderBreakdown($languageBreakdown, 'language', 'Language Breakdown', $totalRecords) !!}
+    {!! renderBreakdown($collaborationBreakdown, 'collaboration', 'Collaboration Breakdown', $totalRecords) !!}
+@endif
 
-{!! renderBreakdown($columnSummaries, 'label', 'Unique Values per Column', $totalRecords) !!}
-{!! renderBreakdown($gradeBreakdown, 'grade', 'Grade Breakdown', $totalRecords) !!}
-{!! renderBreakdown($educationBreakdown, 'education', 'Education Breakdown', $totalRecords) !!}
-{!! renderBreakdown($publicationTypeBreakdown, 'type', 'Publication Type Breakdown', $totalRecords) !!}
-{!! renderBreakdown($indexBreakdown, 'index', 'Index Breakdown', $totalRecords) !!}
-{!! renderBreakdown($languageBreakdown, 'language', 'Language Breakdown', $totalRecords) !!}
-{!! renderBreakdown($collaborationBreakdown, 'collaboration', 'Collaboration Breakdown', $totalRecords) !!}
-
+<!-- ===== FOOTER – conditionally included ===== -->
+@if(!isset($skipFooter) || !$skipFooter)
 <div class="footer">
     <div class="signature-block">
         د علمی څیړنو مرستیال<br>
@@ -208,6 +218,7 @@
         This is an official research metric report generated by Kandahar University Research Database.
     </div>
 </div>
+@endif
 
 </body>
 </html>

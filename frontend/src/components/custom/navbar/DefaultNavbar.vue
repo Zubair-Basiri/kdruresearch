@@ -126,6 +126,7 @@ watch(() => settingStore.headerNavbar, (newVal) => {
 
 const user = computed(() => authStore.user)
 const userRole = computed(() => {
+  if (authStore.isMinistryAuthority) return 'Ministry Authority'
   if (authStore.isSuperAdmin) return 'Super Admin'
   if (authStore.isAdmin) return 'Admin'
   if (authStore.isUser) return 'User'

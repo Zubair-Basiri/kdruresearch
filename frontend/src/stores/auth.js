@@ -10,12 +10,27 @@ export const useAuthStore = defineStore('auth', {
     }),
     getters: {
         isAuthenticated: (state) => !!state.user,
+        
+        // Role-specific getters
+        isMinistryAuthority: (state) => state.user?.role === 'ministry_authority',
         isSuperAdmin: (state) => state.user?.role === 'super_admin',
         isAdmin: (state) => state.user?.role === 'admin',
         isAdminAdmin: (state) => state.user?.role === 'admin_admin',
         isLecturerProfileAdmin: (state) => state.user?.role === 'lecturer_profile_admin',
         isUser: (state) => state.user?.role === 'user',
         isGuest: (state) => state.user?.email === 'guest@example.com',
+
+        // Permission getters
+        canManageUniversityData: (state) => {
+            const role = state.user?.role;
+            return ['ministry_authority', 'super_admin', 'admin'].includes(role);
+        },
+        canManageUniversities: (state) => state.user?.role === 'ministry_authority',
+        canManageUsers: (state) => {
+            const role = state.user?.role;
+            return ['ministry_authority', 'super_admin', 'admin'].includes(role);
+        },
+
         hasRole: (state) => (roles) => {
             if (!state.user) return false;
             if (Array.isArray(roles)) {
@@ -115,6 +130,20 @@ export const useAuthStore = defineStore('auth', {
             } finally {
                 this.loading = false;
             }
-        }
+        },
+        async updateUniversity(universityId) {
+            this.loading = true;
+            this.error = null;
+            try {
+                const response = await api.put('/api/user/university', { university_id: universityId });
+                this.user = response.data.user;
+                return response;
+            } catch (error) {
+                this.error = error.response?.data?.message || 'Failed to update university';
+                throw error;
+            } finally {
+                this.loading = false;
+            }
+        },
     }
 });

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Hekmatinasser\Verta\Verta;
 use Mpdf\Mpdf;
+use App\Models\AcademicPaper;
 
 class TopResearchersController extends Controller
 {
@@ -66,9 +67,13 @@ class TopResearchersController extends Controller
         // Assign ranks
         $this->assignRanks($researchers);
 
+        // Assign faculty ranks
+        $this->assignFacultyRanks($researchers);
+
         // Transform to the format expected by the Vue component
         $formatted = array_map(function ($r) {
             return [
+                'id' => $r['lecturer_id'],
                 'Researcher Name' => $r['lecturername'],
                 'Faculty'         => $r['facultyname'],
                 'Department'      => $r['deptname'],
@@ -102,6 +107,7 @@ class TopResearchersController extends Controller
                 // Computed fields
                 'Weighted Score' => $r['weighted_score'] ?? '-',
                 'Rank'           => $r['rank'] ?? '-',
+                'Faculty Rank'   => $r['faculty_rank'] ?? '-',
             ];
         }, $researchers);
 
@@ -213,6 +219,11 @@ class TopResearchersController extends Controller
                 DB::raw("0 as digital_course_development")     // replace with actual sum
             )
             ->groupBy('lecturers.id', 'lecturers.lecturername', 'faculties.facultyname', 'departments.deptname', 'lecturers.grade');
+
+        $universityId = currentUniversityId();
+        if ($universityId) {
+            $subQuery->where('faculties.university_id', $universityId);
+        }
 
         $results = $subQuery->get();
 
@@ -354,6 +365,7 @@ class TopResearchersController extends Controller
             $r['weighted_score'] = $this->calculateWeightedScore($r, $this->config);
         }
         $this->assignRanks($researchers);
+        $this->assignFacultyRanks($researchers);
 
         // Transform to the format used by the frontend (same keys as index)
         $formatted = array_map(function ($r) {
@@ -387,8 +399,50 @@ class TopResearchersController extends Controller
                 'Digital Course Development'                   => $r['digital_course_development'],
                 'Weighted Score'                               => $r['weighted_score'] ?? '-',
                 'Rank'                                         => $r['rank'] ?? '-',
+                'Faculty Rank'                                 => $r['faculty_rank'] ?? '-',
             ];
         }, $researchers);
+
+        // --- NEW: Handle "Top in Faculty" ---
+        if ($topField === 'Top in Faculty') {
+            $topCount = (int) ($request->query('topInFacultyCount', 3));
+            $selectedFaculty = $request->query('selectedFaculty', 'All');
+
+            if ($selectedFaculty !== 'All') {
+                $formatted = array_filter($formatted, function ($item) use ($selectedFaculty) {
+                    return $item['Faculty'] === $selectedFaculty;
+                });
+                $formatted = array_values($formatted);
+            }
+
+            $facultyGroups = [];
+            foreach ($formatted as $researcher) {
+                $faculty = $researcher['Faculty'] ?? 'Unknown';
+                if (!isset($facultyGroups[$faculty])) {
+                    $facultyGroups[$faculty] = [];
+                }
+                $facultyGroups[$faculty][] = $researcher;
+            }
+
+            $result = [];
+            foreach ($facultyGroups as $faculty => $members) {
+                usort($members, function ($a, $b) {
+                    $sa = $a['Weighted Score'] !== '-' ? (float) $a['Weighted Score'] : -INF;
+                    $sb = $b['Weighted Score'] !== '-' ? (float) $b['Weighted Score'] : -INF;
+                    return $sb <=> $sa;
+                });
+                $top = array_slice($members, 0, $topCount);
+                $result = array_merge($result, $top);
+            }
+            usort($result, function ($a, $b) {
+                $fa = $a['Faculty'] ?? '';
+                $fb = $b['Faculty'] ?? '';
+                if ($fa !== $fb) return strcmp($fa, $fb);
+                return $a['Rank'] - $b['Rank'];
+            });
+            $formatted = $result;
+        }
+        // --- End of new block ---
 
         // Apply search filter
         if (!empty($search)) {
@@ -398,9 +452,8 @@ class TopResearchersController extends Controller
             $formatted = array_values($formatted);
         }
 
-        // Decide which columns to display
-        if ($topField === 'All') {
-            // Full report: all columns, sorted by overall Rank
+        // Build columns
+        if ($topField === 'All' || $topField === 'Top in Faculty') {
             $columns = [
                 'Researcher Name', 'Faculty', 'Department', 'Academic Grade',
                 'Non-indexed National Conference Proceedings',
@@ -427,14 +480,17 @@ class TopResearchersController extends Controller
                 'Total Citations',
                 'Digital Course Development',
                 'Weighted Score',
-                'Rank'
+                'Rank',
+                'Faculty Rank'
             ];
-            // Sort by overall Rank (lowest number first)
-            usort($formatted, function ($a, $b) {
-                return ($a['Rank'] === '-' ? 9999 : $a['Rank']) - ($b['Rank'] === '-' ? 9999 : $b['Rank']);
-            });
+            // For Top in Faculty, we already handled sorting; for All, we sort by overall Rank
+            if ($topField === 'All') {
+                usort($formatted, function ($a, $b) {
+                    return ($a['Rank'] === '-' ? 9999 : $a['Rank']) - ($b['Rank'] === '-' ? 9999 : $b['Rank']);
+                });
+            }
         } else {
-            // Metric‑specific view: show only selected columns + Rank
+            // Metric-specific view
             if (empty($selectedFields)) {
                 $columns = ['Researcher Name', 'Rank'];
             } else {
@@ -443,16 +499,13 @@ class TopResearchersController extends Controller
                     $columns[] = 'Rank';
                 }
             }
-            // Filter researchers with value > 0 for the selected metric
             $formatted = array_filter($formatted, function ($item) use ($topField) {
                 return ($item[$topField] ?? 0) > 0;
             });
             $formatted = array_values($formatted);
-            // Sort by selected metric descending
             usort($formatted, function ($a, $b) use ($topField) {
                 return ($b[$topField] ?? 0) - ($a[$topField] ?? 0);
             });
-            // Reassign rank based on this order
             foreach ($formatted as $idx => &$item) {
                 $item['Rank'] = $idx + 1;
             }
@@ -515,5 +568,71 @@ class TopResearchersController extends Controller
         $western = ['0','1','2','3','4','5','6','7','8','9'];
         $pashto  = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
         return str_replace($western, $pashto, $string);
+    }
+
+    public function getResearcherPapers($id)
+    {
+        $papers = AcademicPaper::where('lecturer_id', $id)
+            ->select('id', 'title', 'year', 'publication', 'indexed', 'citation')
+            ->orderBy('year', 'desc')
+            ->get();
+        
+        return response()->json($papers);
+    }
+
+    /**
+ * Assign faculty-level ranks using RANK.EQ logic.
+ */
+    private function assignFacultyRanks(&$researchers)
+    {
+        // Group by faculty
+        $facultyGroups = [];
+        foreach ($researchers as &$r) {
+            $faculty = $r['facultyname'] ?? null;
+            if (!$faculty) continue;
+            $facultyGroups[$faculty][] = &$r;
+        }
+
+        foreach ($facultyGroups as $faculty => &$group) {
+            // Sort by weighted_score descending, nulls last
+            usort($group, function ($a, $b) {
+                $scoreA = $a['weighted_score'] ?? -INF;
+                $scoreB = $b['weighted_score'] ?? -INF;
+                return $scoreB <=> $scoreA;
+            });
+
+            $rank = 1;
+            $prevScore = null;
+            $tieCount = 0;
+
+            foreach ($group as &$r) {
+                if ($r['weighted_score'] === null) {
+                    $r['faculty_rank'] = '-';
+                    continue;
+                }
+
+                if ($prevScore === null) {
+                    $r['faculty_rank'] = $rank;
+                    $prevScore = $r['weighted_score'];
+                } else {
+                    if ($r['weighted_score'] == $prevScore) {
+                        $r['faculty_rank'] = $rank;
+                        $tieCount++;
+                    } else {
+                        $rank += $tieCount + 1;
+                        $tieCount = 0;
+                        $r['faculty_rank'] = $rank;
+                        $prevScore = $r['weighted_score'];
+                    }
+                }
+            }
+        }
+
+        // Ensure all researchers have faculty_rank set
+        foreach ($researchers as &$r) {
+            if (!isset($r['faculty_rank'])) {
+                $r['faculty_rank'] = '-';
+            }
+        }
     }
 }

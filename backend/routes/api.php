@@ -27,7 +27,7 @@ Route::get('/sanctum/csrf-cookie', function () {
 Route::get('lecturers-for-dropdown', [LecturerController::class, 'forDropdown']);
 Route::post('/guest-login', [AuthController::class, 'guestLogin']);
 
-// Routes for all authenticated users (including lecturers)
+// Routes for all authenticated users (including lecturers and guests)
 Route::middleware(['auth:sanctum'])->group(function () {
     // User info & logout
     Route::get('/user', [AuthController::class, 'user']);
@@ -36,6 +36,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Analytics (all authenticated users)
     Route::get('/top-researchers', [TopResearchersController::class, 'index']);
+    Route::get('/researcher-papers/{id}', [TopResearchersController::class, 'getResearcherPapers']);
     Route::get('/top-researchers/preview', [TopResearchersController::class, 'previewPdf']);
     Route::get('/year-summary', [YearSummaryController::class, 'index']);
     Route::get('/category-summary', [YearSummaryController::class, 'category']);
@@ -46,8 +47,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/faculty-summary', [FacultySummaryController::class, 'index']);
     Route::get('/faculty-summary/preview', [FacultySummaryController::class, 'previewPdf']);
     Route::get('/faculty-aggregation', [FacultyAggregationController::class, 'index']);
-    Route::get('/dashboard/data', [FacultyComponentController::class, 'getData']);
-    Route::get('/dashboard/filters', [FacultyComponentController::class, 'getFilters']);
+    
+    // Dashboard routes – guest must have university
+    Route::middleware(['guest.has.university'])->group(function () {
+        Route::get('/dashboard/data', [FacultyComponentController::class, 'getData']);
+        Route::get('/dashboard/filters', [FacultyComponentController::class, 'getFilters']);
+    });
+    
+    Route::put('/user/university', [AuthController::class, 'updateUniversity']);
     Route::get('/submitted-papers', [SubmittedPaperController::class, 'index']);
     Route::get('/submitted-papers/{submittedPaper}', [SubmittedPaperController::class, 'show']);
     Route::apiResource('academic-papers', AcademicPaperController::class);
@@ -60,10 +67,22 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/faculties/{faculty}', [FacultyController::class, 'show']);
     Route::get('/departments', [DepartmentController::class, 'index']);
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
+    
+    // ✅ Universities list – accessible to all authenticated users (including guests)
+    Route::get('/universities', [UniversityController::class, 'index']);
 });
 
-// Admin & Super Admin only routes (full CRUD, but GET methods are already covered above)
-Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->group(function () {
+// ===== ADMIN ROUTES FOR UNIVERSITY CRUD (only ministry_authority) =====
+Route::middleware(['auth:sanctum', 'role:ministry_authority'])->group(function () {
+    Route::post('/universities', [UniversityController::class, 'store']);
+    Route::put('/universities/{id}', [UniversityController::class, 'update']);
+    Route::delete('/universities/{id}', [UniversityController::class, 'destroy']);
+    Route::post('/universities/{id}/restore', [UniversityController::class, 'restore']);
+    Route::delete('/universities/{id}/force-delete', [UniversityController::class, 'forceDelete']);
+});
+
+// ===== OTHER ADMIN ROUTES =====
+Route::middleware(['auth:sanctum', 'role:ministry_authority,admin,super_admin'])->group(function () {
     // User management
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/{id}', [UserController::class, 'show']);
@@ -84,11 +103,6 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->group(function ()
     Route::post('/departments/{id}/restore', [DepartmentController::class, 'restore']);
     Route::delete('/departments/{id}/force-delete', [DepartmentController::class, 'forceDelete']);
 
-    // Keep full resource for other entities if needed
-    Route::apiResource('universities', UniversityController::class);
-    Route::post('universities/{id}/restore', [UniversityController::class, 'restore']);
-    Route::delete('universities/{id}/force-delete', [UniversityController::class, 'forceDelete']);
-
     Route::apiResource('lecturers', LecturerController::class);
     Route::post('lecturers/{id}/restore', [LecturerController::class, 'restore']);
     Route::delete('lecturers/{id}/force-delete', [LecturerController::class, 'forceDelete']);
@@ -101,7 +115,7 @@ Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->group(function ()
     Route::get('/key-findings/preview', [KeyFindingsController::class, 'previewPdf']);
 });
 
-Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->group(function () {
+Route::middleware(['auth:sanctum', 'role:ministry_authority,admin,super_admin'])->group(function () {
     Route::put('/submitted-papers/{submittedPaper}/approve', [SubmittedPaperController::class, 'approve']);
     Route::put('/submitted-papers/{submittedPaper}/reject', [SubmittedPaperController::class, 'reject']);
 });
@@ -112,8 +126,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/submitted-papers/{submittedPaper}', [SubmittedPaperController::class, 'destroy']);
 });
 
-// Lecturer Profiles – allow super_admin, admin_admin, and lecturer_profile_admin
-Route::middleware(['auth:sanctum', 'role:super_admin,admin_admin,lecturer_profile_admin'])->group(function () {
+// Lecturer Profiles
+Route::middleware(['auth:sanctum', 'role:ministry_authority,super_admin,admin_admin,lecturer_profile_admin'])->group(function () {
     Route::get('lecturer-profiles/export-pdf', [\App\Http\Controllers\API\Addition\LecturerProfileController::class, 'exportPdf']);
     Route::apiResource('lecturer-profiles', \App\Http\Controllers\API\Addition\LecturerProfileController::class);
 });
