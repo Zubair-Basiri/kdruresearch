@@ -78,6 +78,7 @@ class TopResearchersController extends Controller
                 'Faculty'         => $r['facultyname'],
                 'Department'      => $r['deptname'],
                 'Academic Grade'  => $r['grade'],
+                'University'      => $r['university_name'] ?? '',
 
                 // All 23 metrics – keys must match the Vue fields array
                 'Non-indexed National Conference Proceedings' => $r['non_indexed_national_conference'],
@@ -129,13 +130,16 @@ class TopResearchersController extends Controller
             ->join('lecturers', 'academic_papers.lecturer_id', '=', 'lecturers.id')
             ->join('faculties', 'lecturers.faculty_id', '=', 'faculties.id')
             ->join('departments', 'lecturers.department_id', '=', 'departments.id')
-            ->where('academic_papers.status', 'Published')  // Critical: only published papers
+            ->leftJoin('universities', 'faculties.university_id', '=', 'universities.id')
+            ->where('academic_papers.status', 'Published')
+            ->whereNull('academic_papers.deleted_at')
             ->select(
                 'lecturers.id as lecturer_id',
                 'lecturers.lecturername',
                 'faculties.facultyname',
                 'departments.deptname',
                 'lecturers.grade',
+                'universities.name as university_name',
 
                 // 1. Non-indexed National Conference
                 DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Non-Indexed  National (Conference Proceedings)' 
@@ -218,7 +222,7 @@ class TopResearchersController extends Controller
                 // 23. Digital Course Development – sum from another table or column
                 DB::raw("0 as digital_course_development")     // replace with actual sum
             )
-            ->groupBy('lecturers.id', 'lecturers.lecturername', 'faculties.facultyname', 'departments.deptname', 'lecturers.grade');
+            ->groupBy('lecturers.id', 'lecturers.lecturername', 'faculties.facultyname', 'departments.deptname', 'lecturers.grade', 'universities.name');
 
         $universityId = currentUniversityId();
         if ($universityId) {
@@ -374,6 +378,7 @@ class TopResearchersController extends Controller
                 'Faculty'         => $r['facultyname'],
                 'Department'      => $r['deptname'],
                 'Academic Grade'  => $r['grade'],
+                'University'      => $r['university_name'] ?? '',
                 'Non-indexed National Conference Proceedings' => $r['non_indexed_national_conference'],
                 'Total Indexed Conference Proceedings'       => $r['total_indexed_conference'],
                 'Total Book Chapters'                         => $r['total_book_chapters'],
@@ -455,7 +460,7 @@ class TopResearchersController extends Controller
         // Build columns
         if ($topField === 'All' || $topField === 'Top in Faculty') {
             $columns = [
-                'Researcher Name', 'Faculty', 'Department', 'Academic Grade',
+                'Researcher Name', 'Faculty', 'Department', 'University', 'Academic Grade',
                 'Non-indexed National Conference Proceedings',
                 'Total Indexed Conference Proceedings',
                 'Total Book Chapters',

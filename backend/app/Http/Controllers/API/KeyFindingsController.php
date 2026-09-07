@@ -71,6 +71,7 @@ class KeyFindingsController extends Controller
         $papersQuery = DB::table('academic_papers')
             ->join('lecturers', 'academic_papers.lecturer_id', '=', 'lecturers.id')
             ->join('faculties', 'lecturers.faculty_id', '=', 'faculties.id')
+            ->whereNull('academic_papers.deleted_at')
             ->when($universityId, function ($q) use ($universityId) {
                 return $q->where('faculties.university_id', $universityId);
             });
@@ -120,6 +121,7 @@ class KeyFindingsController extends Controller
             ->join('lecturers', 'academic_papers.lecturer_id', '=', 'lecturers.id')
             ->join('faculties', 'lecturers.faculty_id', '=', 'faculties.id')
             ->join('departments', 'lecturers.department_id', '=', 'departments.id')
+            ->whereNull('academic_papers.deleted_at')
             ->select(
                 'lecturers.lecturername as researcher_name',
                 'academic_papers.title as title',

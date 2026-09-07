@@ -76,7 +76,7 @@
 <table class="header-table" style="width:100%;">
     <tr>
         <td style="width:30%; text-align:right;">
-            <img src="{{ public_path('images/KDRU_LOGO.png') }}" style="width: 85px; margin-bottom: 8px;">
+            <img src="{{ public_path('images/ministry.png') }}" style="width: 85px; margin-bottom: 8px;">
             <div class="header-meta"><strong>نیټه:</strong> {{ $date }}</div>
         </td>
         <td style="width:40%; text-align:center;">

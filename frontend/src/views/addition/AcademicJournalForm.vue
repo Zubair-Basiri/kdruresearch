@@ -117,8 +117,6 @@
                   <label class="form-label form-title">Indexed</label>
                   <select v-model="form.indexed" class="form-select form-field">
                     <option value="">Select Index</option>
-                    <option value="Scopus">Scopus</option>
-                    <option value="Web of Science">Web of Science</option>
                     <option value="PubMed/MEDLINE">PubMed/MEDLINE</option>
                     <option value="Non-Indexed National (Conference Proceedings)">Non-Indexed National (Conference Proceedings)</option>
                     <option value="ORI">ORI</option>

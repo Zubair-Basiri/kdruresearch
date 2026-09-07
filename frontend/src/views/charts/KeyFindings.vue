@@ -8,7 +8,7 @@
 
     <!-- Filter Panel -->
     <div class="filter-panel">
-      <!-- Year Range (text inputs) -->
+      <!-- Year Range -->
       <div class="year-range">
         <div class="range-item">
           <label>From Year</label>
@@ -37,7 +37,6 @@
         </div>
       </div>
 
-      <!-- Add this inside the filter-panel, after year-range or before the filter-grid -->
       <div class="researcher-name-filter">
         <label>Researcher Name</label>
         <input
@@ -59,33 +58,32 @@
               <button type="button" class="text-link" @click="clearFilter(filter.key)">Clear</button>
             </div>
           </div>
-          <!-- Inside the v-for for filters -->
-        <Multiselect
-        v-model="selectedFilters[filter.key]"
-        :options="filter.options"
-        :multiple="true"
-        :searchable="true"
-        :close-on-select="false"
-        :clear-on-select="false"
-        :preserve-search="true"
-        placeholder="Select options"
-        label="text"
-        track-by="value"
-        :show-labels="false"
-        :max-height="200"
-        class="multiselect-custom"
-        >
-        <template #selection="{ values }">
-            <span v-if="values.length === 0" class="multiselect__placeholder">
-            {{ filter.label }}
-            </span>
-            <span v-else-if="values.length === 1">{{ values[0].text }}</span>
-            <span v-else-if="values.length === filter.options.length">
-            All ({{ values.length }})
-            </span>
-            <span v-else>{{ values.length }} selected</span>
-        </template>
-        </Multiselect>
+          <Multiselect
+            v-model="selectedFilters[filter.key]"
+            :options="filter.options"
+            :multiple="true"
+            :searchable="true"
+            :close-on-select="false"
+            :clear-on-select="false"
+            :preserve-search="true"
+            placeholder="Select options"
+            label="text"
+            track-by="value"
+            :show-labels="false"
+            :max-height="200"
+            class="multiselect-custom"
+          >
+            <template #selection="{ values }">
+              <span v-if="values.length === 0" class="multiselect__placeholder">
+                {{ filter.label }}
+              </span>
+              <span v-else-if="values.length === 1">{{ values[0].text }}</span>
+              <span v-else-if="values.length === filter.options.length">
+                All ({{ values.length }})
+              </span>
+              <span v-else>{{ values.length }} selected</span>
+            </template>
+          </Multiselect>
         </div>
       </div>
 
@@ -128,34 +126,39 @@
       </div>
     </div>
 
-    <!-- Results Table -->
+    <!-- Results -->
     <div v-if="loading" class="loading-state">Loading data...</div>
-    <div v-else-if="filteredData.length" class="table-wrapper">
-      <p style="color:black">The table below shows the filtered research findings based on your selections.</p>
-      <table class="findings-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th v-for="col in displayColumns" :key="col.key">{{ col.label }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, idx) in paginatedData" :key="idx">
-            <td>{{ (page - 1) * perPage + idx + 1 }}</td>
-            <td v-for="col in displayColumns" :key="col.key">
-              {{ row[col.key] ?? '—' }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <template v-else-if="filteredData.length">
+      <!-- ===== TABLE WRAPPER (only table and pagination) ===== -->
+      <div class="table-wrapper">
+        <p style="color:black">The table below shows the filtered research findings based on your selections.</p>
+        <table class="findings-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th v-for="col in displayColumns" :key="col.key">{{ col.label }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, idx) in paginatedData" :key="idx">
+              <td>{{ (page - 1) * perPage + idx + 1 }}</td>
+              <td v-for="col in displayColumns" :key="col.key">
+                {{ row[col.key] ?? '—' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-      <!-- Pagination -->
-      <div class="pagination-footer">
-        <button class="p-btn" @click="page--" :disabled="page === 1">← Previous</button>
-        <span class="p-info">Page {{ page }} of {{ totalPages }}</span>
-        <button class="p-btn" @click="page++" :disabled="page === totalPages">Next →</button>
+        <!-- Pagination (inside table-wrapper, so it's part of the scrollable area) -->
+        <div class="pagination-footer">
+          <button class="p-btn" @click="page--" :disabled="page === 1">← Previous</button>
+          <span class="p-info">Page {{ page }} of {{ totalPages }}</span>
+          <button class="p-btn" @click="page++" :disabled="page === totalPages">Next →</button>
+        </div>
       </div>
-      <!-- Summary Boxes -->
+
+      <!-- ===== ALL SUMMARY BOXES (OUTSIDE table-wrapper) ===== -->
+      <!-- Summary per Column -->
       <div v-if="filteredData.length" class="summary-boxes">
         <h4 class="summary-title">Summary per Column</h4>
         <div class="summary-grid">
@@ -166,87 +169,80 @@
           </div>
         </div>
       </div>
-      <div v-if="filteredData.length" class="summary-boxes">
-        <div v-if="gradeBreakdown.length" class="grade-breakdown">
-          <h4 class="summary-title">Grade Breakdown</h4>
-          <div class="summary-grid">
-            <div v-for="item in gradeBreakdown" :key="item.grade" class="summary-card">
-              <span class="summary-label">{{ item.grade }}</span>
-              <span class="summary-value">{{ item.count }}</span>
-              <span class="summary-total">/ {{ item.total }} records</span>
-            </div>
+
+      <!-- Grade Breakdown -->
+      <div v-if="filteredData.length && gradeBreakdown.length" class="summary-boxes">
+        <h4 class="summary-title">Grade Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in gradeBreakdown" :key="item.grade" class="summary-card">
+            <span class="summary-label">{{ item.grade }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
           </div>
         </div>
       </div>
+
       <!-- Education Breakdown -->
-      <div v-if="filteredData.length" class="summary-boxes">
-        <div v-if="educationBreakdown.length" class="education-breakdown">
-          <h4 class="summary-title">Education Breakdown</h4>
-          <div class="summary-grid">
-            <div v-for="item in educationBreakdown" :key="item.education" class="summary-card">
-              <span class="summary-label">{{ item.education }}</span>
-              <span class="summary-value">{{ item.count }}</span>
-              <span class="summary-total">/ {{ item.total }} records</span>
-            </div>
+      <div v-if="filteredData.length && educationBreakdown.length" class="summary-boxes">
+        <h4 class="summary-title">Education Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in educationBreakdown" :key="item.education" class="summary-card">
+            <span class="summary-label">{{ item.education }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
           </div>
         </div>
       </div>
+
       <!-- Publication Type Breakdown -->
-      <div v-if="filteredData.length" class="summary-boxes">
-        <div v-if="publicationTypeBreakdown.length" class="breakdown-section">
-          <h4 class="summary-title">Publication Type Breakdown</h4>
-          <div class="summary-grid">
-            <div v-for="item in publicationTypeBreakdown" :key="item.type" class="summary-card">
-              <span class="summary-label">{{ item.type }}</span>
-              <span class="summary-value">{{ item.count }}</span>
-              <span class="summary-total">/ {{ item.total }} records</span>
-            </div>
+      <div v-if="filteredData.length && publicationTypeBreakdown.length" class="summary-boxes">
+        <h4 class="summary-title">Publication Type Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in publicationTypeBreakdown" :key="item.type" class="summary-card">
+            <span class="summary-label">{{ item.type }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
           </div>
         </div>
       </div>
 
       <!-- Index Breakdown -->
-      <div v-if="filteredData.length" class="summary-boxes">
-        <div v-if="indexBreakdown.length" class="breakdown-section">
-          <h4 class="summary-title">Index Breakdown</h4>
-          <div class="summary-grid">
-            <div v-for="item in indexBreakdown" :key="item.index" class="summary-card">
-              <span class="summary-label">{{ item.index }}</span>
-              <span class="summary-value">{{ item.count }}</span>
-              <span class="summary-total">/ {{ item.total }} records</span>
-            </div>
+      <div v-if="filteredData.length && indexBreakdown.length" class="summary-boxes">
+        <h4 class="summary-title">Index Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in indexBreakdown" :key="item.index" class="summary-card">
+            <span class="summary-label">{{ item.index }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
           </div>
         </div>
       </div>
 
       <!-- Language Breakdown -->
-      <div v-if="filteredData.length" class="summary-boxes">
-        <div v-if="languageBreakdown.length" class="breakdown-section">
-          <h4 class="summary-title">Language Breakdown</h4>
-          <div class="summary-grid">
-            <div v-for="item in languageBreakdown" :key="item.language" class="summary-card">
-              <span class="summary-label">{{ item.language }}</span>
-              <span class="summary-value">{{ item.count }}</span>
-              <span class="summary-total">/ {{ item.total }} records</span>
-            </div>
+      <div v-if="filteredData.length && languageBreakdown.length" class="summary-boxes">
+        <h4 class="summary-title">Language Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in languageBreakdown" :key="item.language" class="summary-card">
+            <span class="summary-label">{{ item.language }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
           </div>
         </div>
       </div>
 
       <!-- Collaboration Breakdown -->
-      <div v-if="filteredData.length" class="summary-boxes">
-        <div v-if="collaborationBreakdown.length" class="breakdown-section">
-          <h4 class="summary-title">Collaboration Breakdown</h4>
-          <div class="summary-grid">
-            <div v-for="item in collaborationBreakdown" :key="item.collaboration" class="summary-card">
-              <span class="summary-label">{{ item.collaboration }}</span>
-              <span class="summary-value">{{ item.count }}</span>
-              <span class="summary-total">/ {{ item.total }} records</span>
-            </div>
+      <div v-if="filteredData.length && collaborationBreakdown.length" class="summary-boxes">
+        <h4 class="summary-title">Collaboration Breakdown</h4>
+        <div class="summary-grid">
+          <div v-for="item in collaborationBreakdown" :key="item.collaboration" class="summary-card">
+            <span class="summary-label">{{ item.collaboration }}</span>
+            <span class="summary-value">{{ item.count }}</span>
+            <span class="summary-total">/ {{ item.total }} records</span>
           </div>
         </div>
       </div>
-    </div>
+    </template>
+
     <div v-else class="no-data">No records match the selected filters.</div>
   </div>
 </template>
@@ -579,7 +575,6 @@ async function exportPdf() {
 <style src="vue-multiselect/dist/vue-multiselect.css"></style>
 
 <style scoped>
-
 /* Academic aesthetic – refined blue/gold palette */
 .key-findings-container {
   position: relative;
@@ -588,7 +583,7 @@ async function exportPdf() {
   margin-top: -30px;
   padding: 30px 20px;
   font-family: 'Inter', system-ui, sans-serif;
-  background: #f9f7f3; /* warm off‑white */
+  background: #f9f7f3;
   min-height: 100vh;
   border-radius: 24px;
 }
@@ -599,9 +594,9 @@ async function exportPdf() {
 .main-title {
   font-size: 32px;
   font-weight: 700;
-  color: #2c3e4f; /* deep slate */
+  color: #2c3e4f;
   letter-spacing: -0.5px;
-  border-left: 6px solid #c49a6c; /* warm gold */
+  border-left: 6px solid #c49a6c;
   padding-left: 20px;
 }
 .subtitle {
@@ -637,7 +632,6 @@ async function exportPdf() {
   letter-spacing: 0.3px;
 }
 
-/* Customise vue-multiselect to match academic palette */
 .multiselect-custom {
   min-height: 40px;
   border: 1px solid #d4c9bc;
@@ -795,22 +789,28 @@ async function exportPdf() {
   background: #f9f0e3;
 }
 
-/* Table styling – academic, clean */
+/* ===== TABLE CONTAINER – only this should scroll ===== */
 .table-wrapper {
   background: white;
   border-radius: 16px;
   padding: 10px;
   box-shadow: 0 4px 12px rgba(0, 20, 30, 0.08);
   border: 1px solid #e8dccc;
-  overflow-x: auto;
+  overflow-x: auto;          /* horizontal scroll bar when needed */
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;           /* ensure it doesn't exceed its parent */
 }
+
+/* ===== TABLE – no forced min-width, let it shrink/grow ===== */
 .findings-table {
-  width: 100%;
+  width: auto;               /* let columns define width */
+  max-width: 100%;           /* prevent table from exceeding container */
   border-collapse: collapse;
   font-size: 13px;
+  white-space: nowrap;       /* text on one line → forces horizontal scroll when columns are many */
 }
 .findings-table thead th {
-  background: #f1ede8; /* soft beige */
+  background: #f1ede8;
   color: #2c3e4f;
   font-weight: 600;
   font-size: 12px;
@@ -825,12 +825,13 @@ async function exportPdf() {
   border-bottom: 1px solid #e8dccc;
   color: #3a4e5e;
   vertical-align: top;
+  white-space: nowrap;       /* no wrapping inside cells */
 }
 .findings-table tbody tr:hover {
   background: #faf7f2;
 }
 
-/* Pagination */
+/* Pagination – inside table wrapper, but not scrolling */
 .pagination-footer {
   display: flex;
   justify-content: center;
@@ -857,6 +858,7 @@ async function exportPdf() {
   font-size: 14px;
   color: #5d707f;
 }
+
 .loading-state, .no-data {
   text-align: center;
   padding: 60px;
@@ -884,6 +886,7 @@ async function exportPdf() {
   border-color: #c49a6c;
 }
 
+/* ===== SUMMARY BOXES – no scroll ===== */
 .summary-boxes {
   margin-top: 30px;
   padding: 20px;

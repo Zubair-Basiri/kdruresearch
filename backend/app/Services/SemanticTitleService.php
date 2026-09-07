@@ -15,10 +15,10 @@ class SemanticTitleService
 
     public function __construct()
     {
-        $this->provider = config('semantic.provider', 'openai');
-        $this->apiKey = config('semantic.api_key');
-        $this->apiUrl = config('semantic.api_url');
-        $this->model = config('semantic.model', 'text-embedding-3-small');
+        $this->provider = config('jina.provider', 'jina');
+        $this->apiKey = config('jina.api_key');
+        $this->apiUrl = config('jina.api_url', 'https://api.jina.ai/v1/embeddings');
+        $this->model = config('jina.embedding_model', 'text-embedding-3-small');
     }
 
     /**

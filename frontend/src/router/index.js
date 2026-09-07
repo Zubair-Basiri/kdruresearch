@@ -89,6 +89,42 @@ const defaultChildRoutes = (prefix) => [
     component: () => import('@/views/charts/GradeSummary.vue')
   },
   {
+    path: 'collaboration-analysis',
+    name: 'default.collaborationAnalysis',
+    meta: { auth: true, name: 'Collaboration Analysis', isBanner: true },
+    component: () => import('@/views/analytics/CollaborationAnalysis.vue')
+  },
+  {
+    path: 'citation-analytics',
+    name: 'default.citationAnalytics',
+    meta: { auth: true, name: 'Citation Analytics', isBanner: true },
+    component: () => import('@/views/analytics/CitationAnalytics.vue')
+  },
+  {
+    path: 'benchmarking',
+    name: 'default.benchmarking',
+    meta: { auth: true, name: 'Benchmarking', isBanner: true },
+    component: () => import('@/views/analytics/Benchmarking.vue')
+  },
+  {
+    path: 'research-area-analytics',
+    name: 'default.researchAreaAnalytics',
+    meta: { auth: true, name: 'Research Area Analytics', isBanner: true },
+    component: () => import('@/views/analytics/ResearchAreaAnalytics.vue')
+  },
+  {
+    path: 'research-forecasting',
+    name: 'default.researchForecasting',
+    meta: { auth: true, name: 'Research Forecasting', isBanner: true },
+    component: () => import('@/views/analytics/ResearchForecasting.vue')
+  },
+  {
+    path: 'top-10-lists',
+    name: 'default.top10Lists',
+    meta: { auth: true, name: 'Top 10 Lists', isBanner: true },
+    component: () => import('@/views/analytics/Top10Lists.vue')
+  },
+  {
     path: 'universityList',
     name: 'universityList',
     meta: { auth: true, name: 'University List', isBanner: true },

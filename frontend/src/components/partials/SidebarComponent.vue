@@ -72,7 +72,7 @@
             :route="{ to: 'teachers' }"
           ></side-menu>
           <side-menu
-            title="Academic Journals"
+            title="Academic Papers"
             icon="circle"
             :icon-size="10"
             icon-type="solid"
@@ -157,6 +157,83 @@
         icon="wallet"
         :route="{ to: 'default.GradeSummary' }"
       ></side-menu>
+
+      <li><hr class="hr-horizontal" /></li>
+
+      <!-- Analytics – hidden for lecturer_profile_admin -->
+      <side-menu
+        v-if="!authStore.isLecturerProfileAdmin"
+        title="Analytics"
+        icon="chart-pie"
+        toggle-id="analytics"
+        :caret-icon="true"
+        :route="{ popup: 'false', to: 'analytics' }"
+        @onClick="toggle"
+        :active="currentRoute.includes('analytics')"
+      >
+        <b-collapse
+          tag="ul"
+          class="sub-nav"
+          id="analytics"
+          accordion="sidebar-menu"
+          :visible="currentRoute.includes('analytics')"
+        >
+          <side-menu
+            isTag="router-link"
+            title="Benchmarking"
+            icon="circle"
+            :icon-size="10"
+            icon-type="solid"
+            miniTitle="CA"
+            :route="{ to: 'default.benchmarking' }"
+          ></side-menu>
+          <side-menu
+            isTag="router-link"
+            title="Citation Analytics"
+            icon="circle"
+            :icon-size="10"
+            icon-type="solid"
+            miniTitle="CA"
+            :route="{ to: 'default.citationAnalytics' }"
+          ></side-menu>
+          <side-menu
+            isTag="router-link"
+            title="Collaboration Analysis"
+            icon="circle"
+            :icon-size="10"
+            icon-type="solid"
+            miniTitle="CA"
+            :route="{ to: 'default.collaborationAnalysis' }"
+          ></side-menu>
+          <side-menu
+            isTag="router-link"
+            title="Research Area Analytics"
+            icon="circle"
+            :icon-size="10"
+            icon-type="solid"
+            miniTitle="RA"
+            :route="{ to: 'default.researchAreaAnalytics' }"
+          ></side-menu>
+          <side-menu
+            isTag="router-link"
+            title="Research Forecasting"
+            icon="circle"
+            :icon-size="10"
+            icon-type="solid"
+            miniTitle="RF"
+            :route="{ to: 'default.researchForecasting' }"
+          ></side-menu>
+          <side-menu
+            isTag="router-link"
+            title="Top 10 Lists"
+            icon="circle"
+            :icon-size="10"
+            icon-type="solid"
+            miniTitle="T10"
+            :route="{ to: 'default.top10Lists' }"
+          ></side-menu>
+        </b-collapse>
+      </side-menu>
 
       <li><hr class="hr-horizontal" /></li>
 

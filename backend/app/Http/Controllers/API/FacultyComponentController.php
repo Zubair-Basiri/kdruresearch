@@ -23,7 +23,6 @@ class FacultyComponentController extends Controller
             if (is_null($universityId)) {
                 return response()->json(['message' => 'Please select a university first.'], 422);
             }
-            // If a specific faculty is requested, ensure it belongs to the guest's university
             if ($facultyId) {
                 $faculty = Faculty::where('id', $facultyId)->where('university_id', $universityId)->first();
                 if (!$faculty) {
@@ -53,10 +52,11 @@ class FacultyComponentController extends Controller
             return $this->buildMinistryAllData($year);
         }
 
-        // ===== EXISTING LOGIC (unchanged) =====
+        // ===== EXISTING LOGIC =====
         $query = DB::table('academic_papers')
             ->join('lecturers', 'academic_papers.lecturer_id', '=', 'lecturers.id')
             ->join('faculties', 'lecturers.faculty_id', '=', 'faculties.id')
+            ->whereNull('academic_papers.deleted_at')
             ->select(
                 'faculties.id as faculty_id',
                 'faculties.facultyname as faculty_name',
@@ -114,9 +114,12 @@ class FacultyComponentController extends Controller
             $dataMap[$row->faculty_id][$row->year] = $row;
         }
 
+        // ===== RESEARCHER QUERY =====
         $researcherQuery = DB::table('academic_papers')
             ->join('lecturers', 'academic_papers.lecturer_id', '=', 'lecturers.id')
-            ->join('faculties', 'lecturers.faculty_id', '=', 'faculties.id');
+            ->join('faculties', 'lecturers.faculty_id', '=', 'faculties.id')
+            ->whereNull('academic_papers.deleted_at');
+
         if ($universityId) {
             $researcherQuery->where('faculties.university_id', $universityId);
         }
@@ -128,6 +131,7 @@ class FacultyComponentController extends Controller
         }
         $totalResearchers = $researcherQuery->distinct()->count('academic_papers.lecturer_id');
 
+        // KPIs
         $kpis = [
             'publications' => $filteredRows->sum('total_publications'),
             'funding'      => $filteredRows->sum('total_funding'),
@@ -155,18 +159,16 @@ class FacultyComponentController extends Controller
             'total_research_reports' => $filteredRows->sum('total_research_reports_count'),
         ];
 
-        // ===== FACULTY NAMES FOR CHART CATEGORIES =====
+        // FACULTY NAMES FOR CHART CATEGORIES
         $facultyQuery = Faculty::orderBy('facultyname');
         if ($universityId) {
             $facultyQuery->where('university_id', $universityId);
         }
 
-        // --- NEW: Ministry Authority with specific faculty → only show that faculty in charts ---
         $user = auth()->user();
         if ($user && $user->role === 'ministry_authority' && $facultyId) {
             $facultyQuery->where('id', $facultyId);
         }
-        // --- END NEW ---
 
         $facultyNames = $facultyQuery->pluck('facultyname', 'id');
 
@@ -230,6 +232,7 @@ class FacultyComponentController extends Controller
         $query = DB::table('academic_papers')
             ->join('lecturers', 'academic_papers.lecturer_id', '=', 'lecturers.id')
             ->join('faculties', 'lecturers.faculty_id', '=', 'faculties.id')
+            ->whereNull('academic_papers.deleted_at')
             ->select(
                 'faculties.facultyname as faculty_name',
                 'academic_papers.year',
@@ -279,13 +282,17 @@ class FacultyComponentController extends Controller
             $dataMap[$row->faculty_name][$row->year] = $row;
         }
 
+        // ===== RESEARCHER QUERY =====
         $researcherQuery = DB::table('academic_papers')
-            ->join('lecturers', 'academic_papers.lecturer_id', '=', 'lecturers.id');
+            ->join('lecturers', 'academic_papers.lecturer_id', '=', 'lecturers.id')
+            ->whereNull('academic_papers.deleted_at');
+
         if ($year) {
             $researcherQuery->where('academic_papers.year', $year);
         }
         $totalResearchers = $researcherQuery->distinct()->count('academic_papers.lecturer_id');
 
+        // KPIs
         $kpis = [
             'publications' => $filteredRows->sum('total_publications'),
             'funding'      => $filteredRows->sum('total_funding'),
@@ -368,6 +375,7 @@ class FacultyComponentController extends Controller
                 ->join('faculties', 'lecturers.faculty_id', '=', 'faculties.id')
                 ->select('faculties.facultyname as faculty_name', DB::raw('COUNT(DISTINCT academic_papers.lecturer_id) as researcher_count'))
                 ->where('academic_papers.year', $yr)
+                ->whereNull('academic_papers.deleted_at')
                 ->groupBy('faculties.facultyname')
                 ->get()
                 ->keyBy('faculty_name');
@@ -429,6 +437,7 @@ class FacultyComponentController extends Controller
             $faculties = $facultyQuery->orderBy('facultyname')->get();
         }
 
+        // Years query
         $yearsQuery = AcademicPaper::distinct()->orderBy('year', 'desc');
         if ($universityId && !($user && $user->role === 'ministry_authority')) {
             $yearsQuery->whereHas('lecturer.faculty', function ($q) use ($universityId) {

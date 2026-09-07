@@ -91,6 +91,7 @@
         <div class="card-header">
           <h3 class="researcher-name">{{ researcher['Researcher Name'] }}</h3>
           <div class="meta-info">
+            <span class="meta-item"><strong>University:</strong> {{ researcher['University'] || researcher['university'] || '-' }}</span>
             <span class="meta-item"><strong>Faculty:</strong> {{ researcher['Faculty'] || '-' }}</span>
             <span class="meta-item"><strong>Department:</strong> {{ researcher['Department'] || '-' }}</span>
             <span class="meta-item"><strong>Academic Grade:</strong> {{ researcher['Academic Grade'] || '-' }}</span>

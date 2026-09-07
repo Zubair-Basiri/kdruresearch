@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\SubmittedPaper;
 use App\Models\AcademicPaper;
 use App\Support\TitleNormalizer;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -18,16 +17,19 @@ class PaperDuplicateService
     protected int $translationThreshold;
     protected int $maxJinaCandidates;
     protected array $authorPosMapping = [];
-    protected string $langCacheKey = 'author_position_mapping';
+    protected int $embeddingCacheTtl;
+    protected int $translationCacheTtl;
 
     public function __construct(TitleNormalizer $normalizer)
     {
         $this->normalizer = $normalizer;
-        $this->sameLanguageThreshold = (int) Config::get('semantic.thresholds.same_language', 90);
-        $this->crossLanguageThreshold = (int) Config::get('semantic.thresholds.cross_language', 85);
-        $this->translationThreshold = (int) Config::get('semantic.thresholds.translation', 75);
-        $this->maxJinaCandidates = (int) Config::get('semantic.max_jina_candidates', 20);
-        $this->buildAuthorPositionMapping(); // Rebuilt on every request
+        $this->sameLanguageThreshold = config('jina.same_language_threshold', 90);
+        $this->crossLanguageThreshold = config('jina.cross_language_threshold', 85);
+        $this->translationThreshold = config('jina.translation_threshold', 75);
+        $this->maxJinaCandidates = config('jina.max_candidates', 20);
+        $this->embeddingCacheTtl = config('jina.cache_ttl.embedding', 86400);
+        $this->translationCacheTtl = config('jina.cache_ttl.translation', 3600);
+        $this->buildAuthorPositionMapping();
     }
 
     // ---------- MAIN ENTRY POINT ----------
@@ -71,19 +73,12 @@ class PaperDuplicateService
             }
         }
 
-        // 2. Same‑language candidates
+        // 2. Same‑language lexical
         $sameLangCandidates = array_filter($candidates, function ($c) use ($normalizedLanguage) {
             $cLang = $this->normalizer->normalizeLanguage($c['language'] ?? null);
             return $cLang !== null && $cLang === $normalizedLanguage;
         });
 
-        // 3. Cross‑language candidates (include null language as cross-language)
-        $crossLangCandidates = array_filter($candidates, function ($c) use ($normalizedLanguage) {
-            $cLang = $this->normalizer->normalizeLanguage($c['language'] ?? null);
-            return $cLang === null || $cLang !== $normalizedLanguage;
-        });
-
-        // 4. Same‑language lexical
         if (!empty($sameLangCandidates)) {
             $result = $this->checkSameLanguage($incomingNormalized, $title, $sameLangCandidates);
             if ($result) {
@@ -92,7 +87,12 @@ class PaperDuplicateService
             }
         }
 
-        // 5. Cross‑language
+        // 3. Cross‑language
+        $crossLangCandidates = array_filter($candidates, function ($c) use ($normalizedLanguage) {
+            $cLang = $this->normalizer->normalizeLanguage($c['language'] ?? null);
+            return $cLang === null || $cLang !== $normalizedLanguage;
+        });
+
         if (!empty($crossLangCandidates)) {
             $result = $this->checkCrossLanguage($title, $crossLangCandidates, $normalizedLanguage);
             if ($result) {
@@ -108,22 +108,24 @@ class PaperDuplicateService
     // ---------- CROSS‑LANGUAGE ORCHESTRATOR ----------
     protected function checkCrossLanguage(string $incomingRaw, array $candidates, ?string $normalizedLanguage): ?array
     {
-        // 1. Jina semantic embeddings (lower threshold for short titles)
         $jinaResult = $this->checkCrossLanguageJina($incomingRaw, $candidates);
         if ($jinaResult) {
             Log::info('JINA DUPLICATE FOUND');
             return $jinaResult;
         }
 
-        // 2. Translation fallback
-        Log::info('Jina did not find duplicate, trying translation fallback.');
-        return $this->checkCrossLanguageTranslation($incomingRaw, $candidates, $normalizedLanguage);
+        if ($normalizedLanguage !== null) {
+            Log::info('Jina did not find duplicate, trying translation fallback.');
+            return $this->checkCrossLanguageTranslation($incomingRaw, $candidates, $normalizedLanguage);
+        }
+
+        return null;
     }
 
     // ---------- JINA CHECK ----------
     protected function checkCrossLanguageJina(string $incomingRaw, array $candidates): ?array
     {
-        $apiKey = Config::get('semantic.jina.api_key');
+        $apiKey = config('jina.api_key');
         if (empty($apiKey)) {
             Log::warning('Jina API key missing – skipping cross‑language semantic check.');
             return null;
@@ -145,9 +147,8 @@ class PaperDuplicateService
         $best = null;
         $bestScore = 0;
 
-        $threshold = (float) Config::get('semantic.thresholds.cross_language', 85);
-        $wordCount = str_word_count($incomingRaw);
-        if ($wordCount < 6) {
+        $threshold = (float) $this->crossLanguageThreshold;
+        if (str_word_count($incomingRaw) < 6) {
             $threshold = 65;
         }
 
@@ -257,21 +258,13 @@ class PaperDuplicateService
 
         $translated = $this->translateWithMyMemory($text, 'en');
         if ($translated !== null && !$this->isTranslationError($translated)) {
-            try {
-                Cache::put($cacheKey, $translated, 3600);
-            } catch (\Exception $e) {
-                // ignore
-            }
+            Cache::put($cacheKey, $translated, $this->translationCacheTtl);
             return $translated;
         }
 
         $translated = $this->translateWithLibre($text, 'en');
         if ($translated !== null && !$this->isTranslationError($translated)) {
-            try {
-                Cache::put($cacheKey, $translated, 3600);
-            } catch (\Exception $e) {
-                // ignore
-            }
+            Cache::put($cacheKey, $translated, $this->translationCacheTtl);
             return $translated;
         }
 
@@ -296,9 +289,13 @@ class PaperDuplicateService
 
     protected function translateWithMyMemory(string $text, string $target): ?string
     {
+        if (!config('jina.translation.my_memory.enabled', true)) {
+            return null;
+        }
         try {
-            $url = 'https://api.mymemory.translated.net/get';
-            $response = Http::timeout(6)->get($url, [
+            $url = config('jina.translation.my_memory.url', 'https://api.mymemory.translated.net/get');
+            $timeout = config('jina.translation.my_memory.timeout', 6);
+            $response = Http::timeout($timeout)->get($url, [
                 'q' => $text,
                 'langpair' => 'auto|' . $target,
             ]);
@@ -323,9 +320,13 @@ class PaperDuplicateService
 
     protected function translateWithLibre(string $text, string $target): ?string
     {
+        if (!config('jina.translation.libre_translate.enabled', true)) {
+            return null;
+        }
         try {
-            $url = 'https://libretranslate.com/translate';
-            $response = Http::timeout(5)->post($url, [
+            $url = config('jina.translation.libre_translate.url', 'https://libretranslate.com/translate');
+            $timeout = config('jina.translation.libre_translate.timeout', 5);
+            $response = Http::timeout($timeout)->post($url, [
                 'q' => $text,
                 'source' => 'auto',
                 'target' => $target,
@@ -377,7 +378,9 @@ class PaperDuplicateService
     // ---------- CANDIDATE FETCHING ----------
     protected function fetchCandidates(array $rawPositions, ?int $excludeId, ?string $excludeTable): array
     {
-        Log::info('Fetching candidates with raw positions', ['rawPositions' => $rawPositions]);
+        $universityId = currentUniversityId();
+
+        Log::info('Fetching candidates with raw positions', ['rawPositions' => $rawPositions, 'universityId' => $universityId]);
 
         $candidates = [];
 
@@ -394,6 +397,11 @@ class PaperDuplicateService
         }
         if ($excludeId !== null && $excludeTable === 'submitted') {
             $submittedQuery->where('id', '!=', $excludeId);
+        }
+        if ($universityId) {
+            $submittedQuery->whereHas('lecturer', function ($q) use ($universityId) {
+                $q->where('university_id', $universityId);
+            });
         }
         $submitted = $submittedQuery->get(['id', 'title', 'author_position', 'language'])->toArray();
         foreach ($submitted as $row) {
@@ -413,6 +421,11 @@ class PaperDuplicateService
         }
         if ($excludeId !== null && $excludeTable === 'academic') {
             $academicQuery->where('id', '!=', $excludeId);
+        }
+        if ($universityId) {
+            $academicQuery->whereHas('lecturer', function ($q) use ($universityId) {
+                $q->where('university_id', $universityId);
+            });
         }
         $academic = $academicQuery->get(['id', 'title', 'author_position', 'language'])->toArray();
         foreach ($academic as $row) {
@@ -444,7 +457,6 @@ class PaperDuplicateService
     // ---------- AUTHOR POSITION MAPPING ----------
     protected function buildAuthorPositionMapping(): void
     {
-        // Fresh query every request – no caching.
         $positions = SubmittedPaper::distinct()->pluck('author_position')
             ->merge(AcademicPaper::withoutTrashed()->distinct()->pluck('author_position'))
             ->filter()
@@ -468,10 +480,10 @@ class PaperDuplicateService
     // ---------- JINA EMBEDDING HELPERS ----------
     protected function getJinaEmbeddings(array $texts): ?array
     {
-        $apiKey = Config::get('semantic.jina.api_key');
-        $model = Config::get('semantic.jina.embedding_model', 'jina-embeddings-v5-text-small');
-        $url = Config::get('semantic.jina.api_url', 'https://api.jina.ai/v1/embeddings');
-        $timeout = Config::get('semantic.jina.timeout', 10);
+        $apiKey = config('jina.api_key');
+        $model = config('jina.embedding_model', 'jina-embeddings-v5-text-small');
+        $url = config('jina.api_url', 'https://api.jina.ai/v1/embeddings');
+        $timeout = config('jina.timeout', 10);
 
         $cachePrefix = 'jina_embedding_';
         $embeddings = [];
@@ -501,7 +513,7 @@ class PaperDuplicateService
                 $embeddings[$idx] = $newEmbeddings[$pos];
                 $key = $cachePrefix . md5($model . '|' . $texts[$idx]);
                 try {
-                    Cache::put($key, $newEmbeddings[$pos], 3600);
+                    Cache::put($key, $newEmbeddings[$pos], $this->embeddingCacheTtl);
                 } catch (\Exception $e) {
                     // ignore
                 }

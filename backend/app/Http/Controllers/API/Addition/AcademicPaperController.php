@@ -103,8 +103,8 @@ class AcademicPaperController extends Controller
 
     public function destroy(AcademicPaper $academicPaper)
     {
-        $academicPaper->delete();
-        return response()->json(['message' => 'Paper soft deleted']);
+        $academicPaper->forceDelete();
+        return response()->json(['message' => 'Paper permanently deleted']);
     }
 
     public function restore($id)

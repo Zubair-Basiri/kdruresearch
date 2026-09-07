@@ -16,6 +16,12 @@ use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\TopResearchersController;
 use App\Http\Controllers\API\KeyFindingsController;
 use App\Http\Controllers\API\Addition\SubmittedPaperController;
+use App\Http\Controllers\API\CitationAnalyticsController;
+use App\Http\Controllers\API\BenchmarkingController;
+use App\Http\Controllers\API\ResearchAreaAnalyticsController;
+use App\Http\Controllers\API\CollaborationAnalyticsController;
+use App\Http\Controllers\API\Top10Controller;
+use App\Http\Controllers\API\ResearchForecastingController;
 
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -68,8 +74,22 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/departments', [DepartmentController::class, 'index']);
     Route::get('/departments/{department}', [DepartmentController::class, 'show']);
     
-    // ✅ Universities list – accessible to all authenticated users (including guests)
+    // Universities list – accessible to all authenticated users (including guests)
     Route::get('/universities', [UniversityController::class, 'index']);
+    Route::get('/analytics/citations', [CitationAnalyticsController::class, 'index']);
+    Route::get('/analytics/benchmarking', [BenchmarkingController::class, 'index']);
+    Route::get('/analytics/research-areas', [ResearchAreaAnalyticsController::class, 'index']);
+    Route::get('/research-areas', [ResearchAreaAnalyticsController::class, 'areas']);
+    Route::get('/analytics/collaboration', [CollaborationAnalyticsController::class, 'index']);
+    Route::get('/collaboration-types', [CollaborationAnalyticsController::class, 'collaborationTypes']);
+    Route::get('/analytics/top-10', [Top10Controller::class, 'index']);
+    Route::get('/analytics/research-forecasting', [ResearchForecastingController::class, 'index']);
+    Route::get('/analytics/citation/preview', [CitationAnalyticsController::class, 'previewPdf']);
+    Route::get('/analytics/benchmarking/preview', [BenchmarkingController::class, 'previewPdf']);
+    Route::get('/analytics/research-areas/preview', [ResearchAreaAnalyticsController::class, 'previewPdf']);
+    Route::get('/analytics/collaboration/preview', [CollaborationAnalyticsController::class, 'previewPdf']);
+    Route::get('/analytics/top-10/preview', [Top10Controller::class, 'previewPdf']);
+    Route::get('/analytics/research-forecasting/preview', [ResearchForecastingController::class, 'previewPdf']);
 });
 
 // ===== ADMIN ROUTES FOR UNIVERSITY CRUD (only ministry_authority) =====
