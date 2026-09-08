@@ -198,16 +198,16 @@ class TopResearchersController extends Controller
                                 AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as internationally_peer_reviewed"),
 
                 // 16. 1st Author Position
-                DB::raw("SUM(CASE WHEN academic_papers.author_position = '1st' THEN 1 ELSE 0 END) as first_author"),
+                DB::raw("SUM(CASE WHEN academic_papers.author_position in ('1', '1st') THEN 1 ELSE 0 END) as first_author"),
 
                 // 17. 2nd and 3rd Author Position
-                DB::raw("SUM(CASE WHEN academic_papers.author_position IN ('2nd','3rd') THEN 1 ELSE 0 END) as second_third_author"),
+                DB::raw("SUM(CASE WHEN academic_papers.author_position IN ('2','3', '2nd', '3rd') THEN 1 ELSE 0 END) as second_third_author"),
 
                 // 18. 4th and 5th Author Position
-                DB::raw("SUM(CASE WHEN academic_papers.author_position IN ('4th','5th') THEN 1 ELSE 0 END) as fourth_fifth_author"),
+                DB::raw("SUM(CASE WHEN academic_papers.author_position IN ('4','5', '4th', '5th') THEN 1 ELSE 0 END) as fourth_fifth_author"),
 
                 // 19. Other Author Position (>5th)
-                DB::raw("SUM(CASE WHEN academic_papers.author_position NOT IN ('1st','2nd','3rd','4th','5th') THEN 1 ELSE 0 END) as other_author"),
+                DB::raw("SUM(CASE WHEN academic_papers.author_position NOT IN ('1','2','3','4','5', '1st', '2nd', '3rd', '4th', '5th') THEN 1 ELSE 0 END) as other_author"),
 
                 // 20. Research Funding Sources (any of the listed funding types)
                 DB::raw("SUM(CASE WHEN academic_papers.funding IN ('University (Internal)','National Government/Local','International Donor (UN, World Bank, ADB, USAID, etc.)','International Academic/Research Grant','Private/Industry') 
