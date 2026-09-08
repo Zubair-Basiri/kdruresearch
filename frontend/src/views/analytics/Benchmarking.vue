@@ -253,6 +253,7 @@ export default {
 <script setup>
 import { ref, computed, onMounted} from 'vue'
 import api from '@/services/api'
+import { loadAnalyticsFilters } from '@/services/analyticsFilters'
 import Multiselect from 'vue-multiselect'
 
 const filters = ref({
@@ -300,24 +301,14 @@ const primaryKpis = computed(() => {
 
 // Methods
 const fetchFilterOptions = async () => {
-  try {
-    const [faculties, departments, lecturers, filterData] = await Promise.all([
-      api.get('/faculties'),
-      api.get('/departments'),
-      api.get('/lecturers-for-dropdown'),
-      api.get('/key-findings/filters'),
-    ])
-    facultyOptions.value = faculties.data
-    departmentOptions.value = departments.data
-    researcherOptions.value = lecturers.data.data || lecturers.data
-    const fd = filterData.data
-    gradeOptions.value = fd.grades || []
-    publicationTypeOptions.value = fd.publication_types || []
-    indexedOptions.value = fd.indexes || []
-    languageOptions.value = fd.languages || ['Pashto', 'Dari', 'English']
-  } catch (err) {
-    console.error('Failed to load filter options', err)
-  }
+  const options = await loadAnalyticsFilters()
+  facultyOptions.value = options.faculties
+  departmentOptions.value = options.departments
+  researcherOptions.value = options.researchers
+  gradeOptions.value = options.metadata.grades || []
+  publicationTypeOptions.value = options.metadata.publication_types || []
+  indexedOptions.value = options.metadata.indexes || []
+  languageOptions.value = options.metadata.languages || ['Pashto', 'Dari', 'English']
 }
 
 const fetchEntityOptions = async () => {
@@ -327,7 +318,7 @@ const fetchEntityOptions = async () => {
       university: 'universities',
       faculty: 'faculties',
       department: 'departments',
-      researcher: 'lecturers', // ✅ Use 'lecturers' endpoint for researchers
+      researcher: 'lecturers-for-dropdown',
     };
     const endpoint = endpointMap[level.value] || level.value + 's';
     const response = await api.get(`/${endpoint}`);

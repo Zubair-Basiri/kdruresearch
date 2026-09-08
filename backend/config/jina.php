@@ -7,17 +7,18 @@ return [
     |--------------------------------------------------------------------------
     |
     | All settings for Jina AI embeddings and duplicate detection.
-    | Values are hardcoded here – no .env references.
     |
     */
 
     'provider' => 'jina',
 
-    'api_key' => 'jina_xxxxx', // Replace with your actual key
+    // Keep credentials outside source control. When no key is configured the
+    // duplicate checker safely skips the optional semantic comparison.
+    'api_key' => env('JINA_API_KEY'),
 
-    'embedding_model' => 'jina-embeddings-v5-text-small',
+    'embedding_model' => env('JINA_EMBEDDING_MODEL', 'jina-embeddings-v5-text-small'),
 
-    'api_url' => 'https://api.jina.ai/v1/embeddings',
+    'api_url' => env('JINA_API_URL', 'https://api.jina.ai/v1/embeddings'),
 
     'timeout' => 10,
 

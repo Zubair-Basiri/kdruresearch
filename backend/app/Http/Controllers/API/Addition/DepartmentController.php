@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Addition;
 use App\Http\Controllers\Controller;
 
 use App\Models\Department;
+use App\Models\Faculty;
 use App\Http\Requests\StoreDepartmentRequest;
 use App\Http\Requests\UpdateDepartmentRequest;
 
@@ -66,22 +67,22 @@ class DepartmentController extends Controller
 
     public function restore($id)
     {
+        $department = Department::withTrashed()->findOrFail($id);
         $universityId = currentUniversityId();
         if ($universityId && $department->university_id != $universityId) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-        $department = Department::withTrashed()->findOrFail($id);
         $department->restore();
         return response()->json(['message' => 'Department restored']);
     }
 
     public function forceDelete($id)
     {
+        $department = Department::withTrashed()->findOrFail($id);
         $universityId = currentUniversityId();
         if ($universityId && $department->university_id != $universityId) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-        $department = Department::withTrashed()->findOrFail($id);
         $department->forceDelete();
         return response()->json(['message' => 'Department permanently deleted']);
     }

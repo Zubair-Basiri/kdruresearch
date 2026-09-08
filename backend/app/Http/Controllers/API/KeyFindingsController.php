@@ -17,6 +17,7 @@ class KeyFindingsController extends Controller
 
         // Faculties – filter by university if not null
         $facultiesQuery = DB::table('faculties')
+            ->whereNull('deleted_at')
             ->orderBy('facultyname');
         if ($universityId) {
             $facultiesQuery->where('university_id', $universityId);
@@ -26,6 +27,8 @@ class KeyFindingsController extends Controller
         // Departments – filter by university via faculty
         $departmentsQuery = DB::table('departments')
             ->join('faculties', 'departments.faculty_id', '=', 'faculties.id')
+            ->whereNull('departments.deleted_at')
+            ->whereNull('faculties.deleted_at')
             ->orderBy('departments.deptname');
         if ($universityId) {
             $departmentsQuery->where('faculties.university_id', $universityId);
@@ -33,24 +36,38 @@ class KeyFindingsController extends Controller
         $departments = $departmentsQuery->pluck('departments.deptname', 'departments.id');
 
         // Lecturers – filter by university
-        $lecturersQuery = DB::table('lecturers')
-            ->orderBy('lecturername');
+        $lecturersQuery = DB::table('lecturers')->whereNull('deleted_at');
         if ($universityId) {
             $lecturersQuery->where('university_id', $universityId);
         }
         $lecturers = $lecturersQuery;
 
         // Grades (distinct)
-        $grades = (clone $lecturersQuery)->distinct()->orderBy('grade')->pluck('grade');
+        $grades = (clone $lecturersQuery)
+            ->whereNotNull('grade')
+            ->where('grade', '!=', '')
+            ->distinct()
+            ->orderBy('grade')
+            ->pluck('grade');
 
         // Qualifications (distinct)
-        $qualifications = (clone $lecturersQuery)->distinct()->orderBy('qualification')->pluck('qualification');
+        $qualifications = (clone $lecturersQuery)
+            ->whereNotNull('qualification')
+            ->where('qualification', '!=', '')
+            ->distinct()
+            ->orderBy('qualification')
+            ->pluck('qualification');
 
         // Researcher names
-        $researcherNames = (clone $lecturersQuery)->orderBy('lecturername')->pluck('lecturername');
+        $researcherNames = (clone $lecturersQuery)
+            ->whereNotNull('lecturername')
+            ->where('lecturername', '!=', '')
+            ->orderBy('lecturername')
+            ->pluck('lecturername');
 
         // Research areas – from lecturers, filtered by university
         $areas = DB::table('lecturers')
+            ->whereNull('deleted_at')
             ->whereNotNull('specialized_area')
             ->when($universityId, function ($q) use ($universityId) {
                 return $q->where('university_id', $universityId);

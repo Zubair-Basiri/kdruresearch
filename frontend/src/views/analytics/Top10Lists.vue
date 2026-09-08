@@ -185,6 +185,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
+import { loadAnalyticsFilters } from '@/services/analyticsFilters'
 import { useAuthStore } from '@/stores/auth'
 import { defineOptions } from 'vue'
 
@@ -313,31 +314,19 @@ const showUniversity = computed(() => authStore.isMinistryAuthority)
 
 // Methods
 const fetchFilterOptions = async () => {
-  try {
-    const [faculties, departments, lecturers, filterData, collab] = await Promise.all([
-      api.get('/faculties'),
-      api.get('/departments'),
-      api.get('/lecturers-for-dropdown'),
-      api.get('/key-findings/filters'),
-      api.get('/collaboration-types'),
-    ])
-    facultyOptions.value = faculties.data
-    departmentOptions.value = departments.data
-    researcherOptions.value = lecturers.data.data || lecturers.data
-    const fd = filterData.data
-    gradeOptions.value = fd.grades || []
-    publicationTypeOptions.value = fd.publication_types || []
-    indexedOptions.value = fd.indexes || []
-    languageOptions.value = fd.languages || ['Pashto', 'Dari', 'English']
-    collaborationTypeOptions.value = collab.data || []
-
-    if (authStore.isMinistryAuthority) {
-      const uniRes = await api.get('/universities')
-      universityOptions.value = uniRes.data
-    }
-  } catch (err) {
-    console.error('Failed to load filter options', err)
-  }
+  const options = await loadAnalyticsFilters({
+    collaborationTypes: true,
+    universities: authStore.isMinistryAuthority,
+  })
+  facultyOptions.value = options.faculties
+  departmentOptions.value = options.departments
+  researcherOptions.value = options.researchers
+  gradeOptions.value = options.metadata.grades || []
+  publicationTypeOptions.value = options.metadata.publication_types || []
+  indexedOptions.value = options.metadata.indexes || []
+  languageOptions.value = options.metadata.languages || ['Pashto', 'Dari', 'English']
+  collaborationTypeOptions.value = options.collaborationTypes
+  universityOptions.value = options.universities
 }
 
 const fetchData = async () => {

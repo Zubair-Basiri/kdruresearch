@@ -20,10 +20,6 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
-use Illuminate\Routing\Middleware\SubstituteBindings;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Cache\RateLimiting\Limit;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -34,21 +30,17 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
 
-        // RateLimiter::for('api', function ($request) {
-        // return Limit::perMinute(60)->by($request->ip());
-        // });
+        // Keep Laravel's default web/api middleware groups intact. Overwriting
+        // them removes cookies and StartSession, which makes login appear to
+        // succeed but leaves every subsequent API request unauthenticated.
+        $middleware->statefulApi();
 
-        // API middleware group
-        $middleware->group('api', [
-            EnsureFrontendRequestsAreStateful::class,
-            // 'throttle:api',
-            SubstituteBindings::class,
-        ]);
-
-        //Web middleware group
-        $middleware->group('web', [
-            // 
-        ]);
+        // This application has no server-rendered login route. API callers
+        // must receive a 401 instead of an exception while Laravel tries to
+        // generate a redirect to a missing named route.
+        $middleware->redirectGuestsTo(function ($request) {
+            return $request->is('api/*') ? null : '/';
+        });
 
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
@@ -57,5 +49,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // API clients must receive JSON 401/403 responses. Without this,
+        // unauthenticated requests try to redirect to a non-existent `login`
+        // route and become misleading 500 errors.
+        $exceptions->shouldRenderJsonWhen(function ($request) {
+            return $request->is('api/*') || $request->expectsJson();
+        });
     })->create();
