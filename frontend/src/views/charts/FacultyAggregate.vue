@@ -8,229 +8,228 @@
     </header>
 
     <!-- ================= FACULTY SECTIONS ================= -->
-    <section
-      v-for="f in faculties"
-      :key="f.name"
-      class="faculty-section"
-    >
+    <template v-for="(f, index) in faculties" :key="f?.name || index">
+      <section v-if="f" class="faculty-section">
 
-      <!-- FACULTY TITLE -->
-      <div class="faculty-title">
-        <h2>{{ f.name }}</h2>
-        <span class="subtitle">Academic Profile</span>
-      </div>
+        <!-- FACULTY TITLE -->
+        <div class="faculty-title">
+          <h2>{{ f.name }}</h2>
+          <span class="subtitle">Academic Profile</span>
+        </div>
 
-      <!-- ================= METRICS ================= -->
-      <div class="metrics-panel">
-        <div class="metric-box">
-          <label>Total Publications</label>
-          <strong>{{ f.metrics.publications }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Total Books</label>
-          <strong>{{ f.metrics.books }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Translated Books</label>
-          <strong>{{ f.metrics.translations }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Indexed Papers</label>
-          <strong>{{ f.metrics.indexed }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Non-Indexed Papers</label>
-          <strong>{{ f.metrics.nonIndexed }}</strong>
-        </div>
-        <div class="metric-box accent">
-          <label>Total Citations</label>
-          <strong>{{ f.metrics.citations }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>H-Index</label>
-          <strong>{{ f.metrics.hIndex }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Q1</label>
-          <strong>{{ f.metrics.Q1 }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Q2</label>
-          <strong>{{ f.metrics.Q2 }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Q3</label>
-          <strong>{{ f.metrics.Q3 }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Q4</label>
-          <strong>{{ f.metrics.Q4 }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Total International Conferences</label>
-          <strong>{{ f.metrics.internationalConferences }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Total National Conferences</label>
-          <strong>{{ f.metrics.nationalConferences }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Peer Reviewed Article Journals</label>
-          <strong>{{ f.metrics.peerReviewed }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Case Studies</label>
-          <strong>{{ f.metrics.caseStudies }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Research Reports</label>
-          <strong>{{ f.metrics.researchReports }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>First Authors</label>
-          <strong>{{ f.metrics.firstAuthors }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Second Authors</label>
-          <strong>{{ f.metrics.secondAuthors }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Third Authors</label>
-          <strong>{{ f.metrics.thirdAuthors }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Other Authors</label>
-          <strong>{{ f.metrics.otherAuthors }}</strong>
-        </div>
-        <div class="metric-box">
-          <label>Total Researchers</label>
-          <strong>{{ f.metrics.totalResearchers }}</strong>
-        </div>
-      </div>
-
-      <!-- ================= LEADERS ================= -->
-      <div class="academic-card">
-        <h3>Academic Leadership</h3>
-        <div class="leader-list">
-          <div><span>Top Researcher</span><b>{{ f.leaders.topResearcher }}</b></div>
-          <div><span>Most Books</span><b>{{ f.leaders.mostBooks }}</b></div>
-          <div><span>Most Translations</span><b>{{ f.leaders.mostTranslations }}</b></div>
-          <div><span>Indexed Journals</span><b>{{ f.leaders.indexedJournals }}</b></div>
-          <div><span>Peer-Reviewed Journals</span><b>{{ f.leaders.peerReviewed }}</b></div>
-          <div><span>Top Department</span><b>{{ f.leaders.department }}</b></div>
-          <div><span>Top Grade</span><b>{{ f.leaders.grade }}</b></div>
-        </div>
-      </div>
-
-      <!-- ================= YEARLY ================= -->
-      <div class="academic-card">
-        <h3>Publications by Year</h3>
-        <!-- Mobile View: Yearly data as cards -->
-        <div class="yearly-mobile-view">
-          <div v-for="y in years" :key="y" class="year-item">
-            <span class="year-label">{{ y }}</span>
-            <span class="year-value">{{ f.yearly[y] }}</span>
+        <!-- ================= METRICS ================= -->
+        <div class="metrics-panel">
+          <div class="metric-box">
+            <label>Total Publications</label>
+            <strong>{{ f.metrics.publications }}</strong>
           </div>
-          <div class="year-item total">
-            <span class="year-label">Total</span>
-            <span class="year-value">{{ yearTotal(f.yearly) }}</span>
+          <div class="metric-box">
+            <label>Total Books</label>
+            <strong>{{ f.metrics.books }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Translated Books</label>
+            <strong>{{ f.metrics.translations }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Indexed Papers</label>
+            <strong>{{ f.metrics.indexed }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Non-Indexed Papers</label>
+            <strong>{{ f.metrics.nonIndexed }}</strong>
+          </div>
+          <div class="metric-box accent">
+            <label>Total Citations</label>
+            <strong>{{ f.metrics.citations }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>H-Index</label>
+            <strong>{{ f.metrics.hIndex }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Q1</label>
+            <strong>{{ f.metrics.Q1 }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Q2</label>
+            <strong>{{ f.metrics.Q2 }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Q3</label>
+            <strong>{{ f.metrics.Q3 }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Q4</label>
+            <strong>{{ f.metrics.Q4 }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Total International Conferences</label>
+            <strong>{{ f.metrics.internationalConferences }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Total National Conferences</label>
+            <strong>{{ f.metrics.nationalConferences }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Peer Reviewed Article Journals</label>
+            <strong>{{ f.metrics.peerReviewed }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Case Studies</label>
+            <strong>{{ f.metrics.caseStudies }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Research Reports</label>
+            <strong>{{ f.metrics.researchReports }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>First Authors</label>
+            <strong>{{ f.metrics.firstAuthors }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Second Authors</label>
+            <strong>{{ f.metrics.secondAuthors }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Third Authors</label>
+            <strong>{{ f.metrics.thirdAuthors }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Other Authors</label>
+            <strong>{{ f.metrics.otherAuthors }}</strong>
+          </div>
+          <div class="metric-box">
+            <label>Total Researchers</label>
+            <strong>{{ f.metrics.totalResearchers }}</strong>
           </div>
         </div>
-        
-        <!-- Desktop View: Yearly data as table -->
-        <div class="yearly-desktop-view">
-          <table class="academic-table">
-            <thead>
-              <tr>
-                <th v-for="y in years" :key="y">{{ y }}</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td v-for="y in years" :key="y">{{ f.yearly[y] }}</td>
-                <td class="total">{{ yearTotal(f.yearly) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      <!-- ================= LANGUAGE ================= -->
-      <div class="academic-card">
-        <h3>Publication Language Count</h3>
-        <!-- Mobile View: Language as cards -->
-        <div class="language-mobile-view">
-          <div class="language-item">
-            <span class="language-label">Pashto</span>
-            <span class="language-value">{{ f.languages.pashto }}</span>
-          </div>
-          <div class="language-item">
-            <span class="language-label">Dari</span>
-            <span class="language-value">{{ f.languages.dari }}</span>
-          </div>
-          <div class="language-item">
-            <span class="language-label">English</span>
-            <span class="language-value">{{ f.languages.english }}</span>
+        <!-- ================= LEADERS ================= -->
+        <div class="academic-card">
+          <h3>Academic Leadership</h3>
+          <div class="leader-list">
+            <div><span>Top Researcher</span><b>{{ f.leaders.topResearcher }}</b></div>
+            <div><span>Most Books</span><b>{{ f.leaders.mostBooks }}</b></div>
+            <div><span>Most Translations</span><b>{{ f.leaders.mostTranslations }}</b></div>
+            <div><span>Indexed Journals</span><b>{{ f.leaders.indexedJournals }}</b></div>
+            <div><span>Peer-Reviewed Journals</span><b>{{ f.leaders.peerReviewed }}</b></div>
+            <div><span>Top Department</span><b>{{ f.leaders.department }}</b></div>
+            <div><span>Top Grade</span><b>{{ f.leaders.grade }}</b></div>
           </div>
         </div>
-        
-        <!-- Desktop View: Language as table -->
-        <div class="language-desktop-view">
-          <table class="academic-table">
-            <thead>
-              <tr>
-                <th>Pashto</th>
-                <th>Dari</th>
-                <th>English</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{{ f.languages.pashto }}</td>
-                <td>{{ f.languages.dari }}</td>
-                <td>{{ f.languages.english }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      <!-- ================= FUNDING ================= -->
-      <div class="academic-card">
-        <h3>Funding Type</h3>
-        <!-- Mobile View: Funding as cards -->
-        <div class="funding-mobile-view">
-          <div class="funding-item">
-            <span class="funding-label">National / Funded</span>
-            <span class="funding-value">{{ f.funding.funded }}</span>
+        <!-- ================= YEARLY ================= -->
+        <div class="academic-card">
+          <h3>Publications by Year</h3>
+          <!-- Mobile View: Yearly data as cards -->
+          <div class="yearly-mobile-view">
+            <div v-for="y in years" :key="y" class="year-item">
+              <span class="year-label">{{ y }}</span>
+              <span class="year-value">{{ f.yearly[y] }}</span>
+            </div>
+            <div class="year-item total">
+              <span class="year-label">Total</span>
+              <span class="year-value">{{ yearTotal(f.yearly) }}</span>
+            </div>
           </div>
-          <div class="funding-item">
-            <span class="funding-label">Self-Funded</span>
-            <span class="funding-value">{{ f.funding.self }}</span>
+          
+          <!-- Desktop View: Yearly data as table -->
+          <div class="yearly-desktop-view">
+            <table class="academic-table">
+              <thead>
+                <tr>
+                  <th v-for="y in years" :key="y">{{ y }}</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td v-for="y in years" :key="y">{{ f.yearly[y] }}</td>
+                  <td class="total">{{ yearTotal(f.yearly) }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-        
-        <!-- Desktop View: Funding as table -->
-        <div class="funding-desktop-view">
-          <table class="academic-table">
-            <thead>
-              <tr>
-                <th>National / Funded</th>
-                <th>Self-Funded</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{{ f.funding.funded }}</td>
-                <td>{{ f.funding.self }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-    </section>
+        <!-- ================= LANGUAGE ================= -->
+        <div class="academic-card">
+          <h3>Publication Language Count</h3>
+          <!-- Mobile View: Language as cards -->
+          <div class="language-mobile-view">
+            <div class="language-item">
+              <span class="language-label">Pashto</span>
+              <span class="language-value">{{ f.languages.pashto }}</span>
+            </div>
+            <div class="language-item">
+              <span class="language-label">Dari</span>
+              <span class="language-value">{{ f.languages.dari }}</span>
+            </div>
+            <div class="language-item">
+              <span class="language-label">English</span>
+              <span class="language-value">{{ f.languages.english }}</span>
+            </div>
+          </div>
+          
+          <!-- Desktop View: Language as table -->
+          <div class="language-desktop-view">
+            <table class="academic-table">
+              <thead>
+                <tr>
+                  <th>Pashto</th>
+                  <th>Dari</th>
+                  <th>English</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ f.languages.pashto }}</td>
+                  <td>{{ f.languages.dari }}</td>
+                  <td>{{ f.languages.english }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ================= FUNDING ================= -->
+        <div class="academic-card">
+          <h3>Funding Type</h3>
+          <!-- Mobile View: Funding as cards -->
+          <div class="funding-mobile-view">
+            <div class="funding-item">
+              <span class="funding-label">National / Funded</span>
+              <span class="funding-value">{{ f.funding.funded }}</span>
+            </div>
+            <div class="funding-item">
+              <span class="funding-label">Self-Funded</span>
+              <span class="funding-value">{{ f.funding.self }}</span>
+            </div>
+          </div>
+          
+          <!-- Desktop View: Funding as table -->
+          <div class="funding-desktop-view">
+            <table class="academic-table">
+              <thead>
+                <tr>
+                  <th>National / Funded</th>
+                  <th>Self-Funded</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ f.funding.funded }}</td>
+                  <td>{{ f.funding.self }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+    </template>
+
   </div>
 </template>
 

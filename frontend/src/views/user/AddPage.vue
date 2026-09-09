@@ -220,7 +220,7 @@ const onLecturerSelected = (lecturer) => {
 const fetchLecturers = async () => {
   try {
     const res = await api.get('/lecturers-for-dropdown');
-    lecturers.value = res.data.data || [];
+    lecturers.value = res.data || [];
   } catch (err) {
     console.error('Failed to fetch lecturers', err);
   }
