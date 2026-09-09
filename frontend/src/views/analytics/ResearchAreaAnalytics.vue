@@ -218,6 +218,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
+import { loadAnalyticsFilters } from '@/services/analyticsFilters'
 import { useAuthStore } from '@/stores/auth'
 import { defineOptions } from 'vue'
 
@@ -338,34 +339,19 @@ const facultyBreakdownAreas = computed(() => {
 
 // Methods
 const fetchFilterOptions = async () => {
-  try {
-    const [faculties, departments, lecturers, filterData] = await Promise.all([
-      api.get('/faculties'),
-      api.get('/departments'),
-      api.get('/lecturers-for-dropdown'),
-      api.get('/key-findings/filters'),
-    ])
-    facultyOptions.value = faculties.data
-    departmentOptions.value = departments.data
-    researcherOptions.value = lecturers.data.data || lecturers.data
-    const fd = filterData.data
-    gradeOptions.value = fd.grades || []
-    publicationTypeOptions.value = fd.publication_types || []
-    indexedOptions.value = fd.indexes || []
-    languageOptions.value = fd.languages || ['Pashto', 'Dari', 'English']
-
-    // Fetch universities (for ministry)
-    if (authStore.isMinistryAuthority) {
-      const uniRes = await api.get('/universities')
-      universityOptions.value = uniRes.data
-    }
-
-    // Fetch research areas (distinct from lecturers)
-    const areasRes = await api.get('/research-areas') // We'll need a new endpoint for this
-    areaOptions.value = areasRes.data || []
-  } catch (err) {
-    console.error('Failed to load filter options', err)
-  }
+  const options = await loadAnalyticsFilters({
+    researchAreas: true,
+    universities: authStore.isMinistryAuthority,
+  })
+  facultyOptions.value = options.faculties
+  departmentOptions.value = options.departments
+  researcherOptions.value = options.researchers
+  gradeOptions.value = options.metadata.grades || []
+  publicationTypeOptions.value = options.metadata.publication_types || []
+  indexedOptions.value = options.metadata.indexes || []
+  languageOptions.value = options.metadata.languages || ['Pashto', 'Dari', 'English']
+  universityOptions.value = options.universities
+  areaOptions.value = options.researchAreas
 }
 
 const fetchData = async () => {

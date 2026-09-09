@@ -22,8 +22,14 @@ use App\Http\Controllers\API\ResearchAreaAnalyticsController;
 use App\Http\Controllers\API\CollaborationAnalyticsController;
 use App\Http\Controllers\API\Top10Controller;
 use App\Http\Controllers\API\ResearchForecastingController;
+use Illuminate\Support\Facades\DB;
 
 // Public routes
+Route::get('/health', function () {
+    DB::select('SELECT 1');
+
+    return response()->json(['status' => 'ok']);
+});
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/users', [AuthController::class, 'register']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
@@ -76,6 +82,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     
     // Universities list – accessible to all authenticated users (including guests)
     Route::get('/universities', [UniversityController::class, 'index']);
+    // Shared filter metadata is read-only and is required by all analytics
+    // pages, not only administrator-only Key Findings screens.
+    Route::get('/key-findings/filters', [KeyFindingsController::class, 'filters']);
     Route::get('/analytics/citations', [CitationAnalyticsController::class, 'index']);
     Route::get('/analytics/benchmarking', [BenchmarkingController::class, 'index']);
     Route::get('/analytics/research-areas', [ResearchAreaAnalyticsController::class, 'index']);
@@ -130,7 +139,6 @@ Route::middleware(['auth:sanctum', 'role:ministry_authority,admin,super_admin'])
     Route::delete('academic-papers/{id}/force-delete', [AcademicPaperController::class, 'forceDelete']);
     Route::put('/submitted-papers/{submittedPaper}/comment', [SubmittedPaperController::class, 'updateComment']);
 
-    Route::get('/key-findings/filters', [KeyFindingsController::class, 'filters']);
     Route::get('/key-findings', [KeyFindingsController::class, 'index']);
     Route::get('/key-findings/preview', [KeyFindingsController::class, 'previewPdf']);
 });

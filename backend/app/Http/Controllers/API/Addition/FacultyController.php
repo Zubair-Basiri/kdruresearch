@@ -40,7 +40,7 @@ class FacultyController extends Controller
     public function update(UpdateFacultyRequest $request, Faculty $faculty)
     {
         $universityId = currentUniversityId();
-        if ($universityId && $department->university_id != $universityId) {
+        if ($universityId && $faculty->university_id != $universityId) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
         $faculty->update($request->validated());
@@ -50,7 +50,7 @@ class FacultyController extends Controller
     public function destroy(Faculty $faculty)
     {
         $universityId = currentUniversityId();
-        if ($universityId && $department->university_id != $universityId) {
+        if ($universityId && $faculty->university_id != $universityId) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
         $faculty->delete();
@@ -59,22 +59,22 @@ class FacultyController extends Controller
 
     public function restore($id)
     {
+        $faculty = Faculty::withTrashed()->findOrFail($id);
         $universityId = currentUniversityId();
-        if ($universityId && $department->university_id != $universityId) {
+        if ($universityId && $faculty->university_id != $universityId) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-        $faculty = Faculty::withTrashed()->findOrFail($id);
         $faculty->restore();
         return response()->json(['message' => 'Faculty restored']);
     }
 
     public function forceDelete($id)
     {
+        $faculty = Faculty::withTrashed()->findOrFail($id);
         $universityId = currentUniversityId();
-        if ($universityId && $department->university_id != $universityId) {
+        if ($universityId && $faculty->university_id != $universityId) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-        $faculty = Faculty::withTrashed()->findOrFail($id);
         $faculty->forceDelete();
         return response()->json(['message' => 'Faculty permanently deleted']);
     }

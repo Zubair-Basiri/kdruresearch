@@ -235,6 +235,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
+import { loadAnalyticsFilters } from '@/services/analyticsFilters'
 import { useAuthStore } from '@/stores/auth'
 import { defineOptions } from 'vue'
 
@@ -346,22 +347,13 @@ const tableData = computed(() => {
 
 // Methods
 const fetchFilterOptions = async () => {
-  try {
-    const [faculties, departments, lecturers] = await Promise.all([
-      api.get('/faculties'),
-      api.get('/departments'),
-      api.get('/lecturers-for-dropdown'),
-    ])
-    facultyOptions.value = faculties.data
-    departmentOptions.value = departments.data
-    researcherOptions.value = lecturers.data.data || lecturers.data
-    if (authStore.isMinistryAuthority) {
-      const uniRes = await api.get('/universities')
-      universityOptions.value = uniRes.data
-    }
-  } catch (err) {
-    console.error('Failed to load filter options', err)
-  }
+  const options = await loadAnalyticsFilters({
+    universities: authStore.isMinistryAuthority,
+  })
+  facultyOptions.value = options.faculties
+  departmentOptions.value = options.departments
+  researcherOptions.value = options.researchers
+  universityOptions.value = options.universities
 }
 
 const fetchData = async () => {
