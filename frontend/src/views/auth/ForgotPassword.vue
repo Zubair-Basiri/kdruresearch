@@ -7,30 +7,20 @@
             <b-card class="border-0 shadow auth-card" body-class="p-4 p-lg-5" no-body>
               <div class="text-center mb-4">
                 <h3 class="mt-4 mb-1 fw-bold" style="font-size: 22px; color: #2b66a1;">
-                  Set New Password
+                  Reset Password
                 </h3>
-                <p class="text-muted">Enter your new password below.</p>
+                <p class="text-muted">Enter your email address and we'll send you a link to reset your password.</p>
               </div>
 
-              <form @submit.prevent="resetPassword">
-                <div class="mb-3">
-                  <label for="password" class="form-label fw-medium text-secondary">New Password</label>
-                  <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0">
-                      <i class="bi bi-lock"></i>
-                    </span>
-                    <input type="password" class="form-control border-start-0 ps-0" id="password"
-                           v-model="password" placeholder="••••••••" required />
-                  </div>
-                </div>
+              <form @submit.prevent="sendResetLink">
                 <div class="mb-4">
-                  <label for="password_confirmation" class="form-label fw-medium text-secondary">Confirm Password</label>
+                  <label for="email" class="form-label fw-medium text-secondary">Email address</label>
                   <div class="input-group">
                     <span class="input-group-text bg-light border-end-0">
-                      <i class="bi bi-lock"></i>
+                      <i class="bi bi-envelope"></i>
                     </span>
-                    <input type="password" class="form-control border-start-0 ps-0" id="password_confirmation"
-                           v-model="password_confirmation" placeholder="••••••••" required />
+                    <input type="email" class="form-control border-start-0 ps-0" id="email"
+                           v-model="email" placeholder="name@xyz.abc" required />
                   </div>
                 </div>
 
@@ -46,7 +36,7 @@
                 <div class="d-grid gap-2 mt-4">
                   <button type="submit" class="btn btn-primary py-3 fw-semibold rounded-3" :disabled="loading">
                     <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
-                    {{ loading ? 'Resetting...' : 'Reset Password' }}
+                    {{ loading ? 'Sending...' : 'Send Reset Link' }}
                   </button>
                 </div>
 
@@ -65,57 +55,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref } from 'vue';
 import api from '@/services/api';
 
-const route = useRoute();
-const router = useRouter();
-
-const password = ref('');
-const password_confirmation = ref('');
+const email = ref('');
 const message = ref('');
 const error = ref('');
 const loading = ref(false);
 
-const token = ref('');
-const email = ref('');
-
-onMounted(() => {
-  token.value = route.query.token || '';
-  email.value = route.query.email || '';
-  if (!token.value || !email.value) {
-    error.value = 'Invalid reset link. Please request a new one.';
-  }
-});
-
-async function resetPassword() {
-  if (password.value !== password_confirmation.value) {
-    error.value = 'Passwords do not match.';
-    return;
-  }
-  if (password.value.length < 8) {
-    error.value = 'Password must be at least 8 characters.';
-    return;
-  }
-
+async function sendResetLink() {
   message.value = '';
   error.value = '';
   loading.value = true;
-
   try {
-    const response = await api.post('/reset-password', {
-      token: token.value,
-      email: email.value,
-      password: password.value,
-      password_confirmation: password_confirmation.value,
-    });
-    message.value = response.data.message || 'Password has been reset. You can now login.';
-    setTimeout(() => {
-      router.push({ name: 'auth.login' });
-    }, 3000);
+    const response = await api.post('/forgot-password', { email: email.value });
+    message.value = response.data.message || 'Password reset link sent to your email.';
   } catch (err) {
-    error.value = err.response?.data?.message || 'Failed to reset password.';
+    error.value = err.response?.data?.message || 'Failed to send reset link.';
   } finally {
     loading.value = false;
   }
@@ -123,7 +79,7 @@ async function resetPassword() {
 </script>
 
 <style scoped>
-/* reuse same styles as ForgotPassword */
+/* reuse styles from Login.vue */
 .login-content {
   position: relative;
   min-height: 100vh;

@@ -45,10 +45,17 @@ class UserController extends Controller
      * Display the specified user.
      */
     public function show($id)
-    {
-        $user = User::select('id', 'name', 'email', 'role', 'university_id')->findOrFail($id);
-        return response()->json($user);
-    }
+{
+    $user = User::with('lecturer:id,user_id')->findOrFail($id);
+    return response()->json([
+        'id' => $user->id,
+        'name' => $user->name,
+        'email' => $user->email,
+        'role' => $user->role,
+        'university_id' => $user->university_id,
+        'lecturer_id' => $user->lecturer?->id,
+    ]);
+}
 
     public function store(Request $request)
     {

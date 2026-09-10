@@ -32,12 +32,13 @@ Route::get('/health', function () {
 });
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/users', [AuthController::class, 'register']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 Route::get('/sanctum/csrf-cookie', function () {
     return response()->json(['message' => 'CSRF cookie set']);
 });
 Route::get('lecturers-for-dropdown', [LecturerController::class, 'forDropdown']);
 Route::post('/guest-login', [AuthController::class, 'guestLogin']);
+Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
 
 // Routes for all authenticated users (including lecturers and guests)
 Route::middleware(['auth:sanctum'])->group(function () {

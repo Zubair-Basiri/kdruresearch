@@ -30,6 +30,13 @@ const authChildRoutes = (prefix) => [
     meta: { auth: false, name: 'Reset Password' },
     component: () => import('@/views/auth/default/ResetPassword.vue')
   },
+
+  {
+    path: '/forgot-password',
+    name: 'auth.forgot-password',
+    component: () => import('@/views/auth/ForgotPassword.vue'),
+    meta: { guest: true },
+  },
   // {
   //   path: 'lock-screen',
   //   name: prefix + '.lock-screen',

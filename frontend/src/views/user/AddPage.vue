@@ -233,27 +233,27 @@ const loadUserData = async () => {
     loading.value = true;
     const response = await api.get(`/users/${route.params.id}`);
     const user = response.data;
-    
-    // For admin/super_admin roles, split the name
+    console.log('Loaded user:', user); // Debug
+
     if (user.role !== 'user') {
-      const nameParts = user.name.split(' ');
+      const nameParts = user.name.trim().split(/\s+/);
       form.value.first_name = nameParts[0] || '';
       form.value.last_name = nameParts.slice(1).join(' ') || '';
     } else {
-      // For user role, we don't have first/last name fields – clear them
       form.value.first_name = '';
       form.value.last_name = '';
     }
 
     if (user.role === 'ministry_authority') {
-        form.value.university_id = null; // ensure it's null
+      form.value.university_id = null;
+    } else {
+      form.value.university_id = user.university_id || null;
     }
-    
+
     form.value.email = user.email;
     form.value.role = user.role;
-    form.value.university_id = user.university_id || null;
-    
-    // If user is a lecturer, pre-select their linked lecturer
+
+    // Pre-select lecturer for user role
     if (user.role === 'user' && user.lecturer_id) {
       const linkedLecturer = lecturers.value.find(l => l.id === user.lecturer_id);
       if (linkedLecturer) {
@@ -263,6 +263,8 @@ const loadUserData = async () => {
           faculty: linkedLecturer.faculty?.facultyname,
         };
         form.value.lecturer_id = linkedLecturer.id;
+      } else {
+        console.warn('Lecturer not found in options for ID:', user.lecturer_id);
       }
     }
   } catch (err) {

@@ -421,13 +421,63 @@ onMounted(async () => {
 .page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0; }
 .page-subtitle { color: #6b7280; }
 .podium { background: #f8fafc; border-radius: 12px; padding: 20px; }
-.podium-item { background: #fff; border-radius: 8px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.podium-item {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
 .podium-item.rank-1 { border: 2px solid #fbbf24; }
 .podium-item.rank-2 { border: 2px solid #94a3b8; }
 .podium-item.rank-3 { border: 2px solid #f59e0b; }
 .podium-rank { font-size: 2rem; font-weight: 700; color: #1e293b; }
-.podium-name { font-weight: 600; }
+.podium-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;       
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+  margin: 4px 0;
+}
+.podium .row {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  justify-content: center;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.podium .row > .col-4,
+.podium .row > .col-md-3 {
+  flex: 1 1 0 !important;    
+  width: 33.333% !important;
+  max-width: 260px !important;
+  min-width: 0;            
+  display: flex;
+}
 .podium-value { font-size: 1.2rem; font-weight: 700; color: #0f172a; }
 .insights-list { list-style: none; padding: 0; }
 .insights-list li { padding: 6px 0; border-bottom: 1px solid #f3f4f6; }
+
+@media (max-width: 576px) {
+  .podium .row {
+    flex-wrap: wrap !important;
+  }
+  .podium .row > .col-4 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+}
 </style>

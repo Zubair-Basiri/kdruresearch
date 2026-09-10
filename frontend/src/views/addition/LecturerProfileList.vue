@@ -422,9 +422,25 @@ const nextPage = () => { if (page.value < totalPages.value) { page.value++; fetc
 
 onMounted(fetchData)
 </script>
+<style>
+/* Global font-face – only once */
+@font-face {
+  font-family: 'bahij_nazanin';
+  src: url('~@/assets/fonts/Bahij_Nazanin-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+</style>
 
 <style scoped>
-/* existing styles */
+/* Apply Bahij Badr to all text inside .p-6.mt-5 */
+.p-6.mt-5 {
+  font-family: 'bahij_nazanin', 'Arial', sans-serif;
+  direction: rtl;
+}
+
+/* Keep numbers LTR if needed, but now they'll use Bahij Badr too */
+/* All other styles remain unchanged */
 .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 20px; }
 .profile-card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -493,7 +509,7 @@ onMounted(fetchData)
   display: block;
 }
 .summary-total {
-  font-size: 14;
+  font-size: 14px;
   color: #718096;
 }
 </style>

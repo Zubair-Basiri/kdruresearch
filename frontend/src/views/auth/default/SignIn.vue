@@ -66,6 +66,12 @@
                 </p>
 
                 <p class="mt-2 text-center">
+                 <router-link :to="{ name: 'auth.forgot-password' }" class="text-primary fw-medium text-decoration-none">
+                   Forgot your password?
+                 </router-link>
+                </p>
+
+                <p class="mt-2 text-center">
                   <a href="#" class="text-primary fw-medium text-decoration-none" @click.prevent="guestLogin">
                     Or login as a guest
                   </a>

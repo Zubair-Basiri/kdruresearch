@@ -296,7 +296,7 @@ const allData = ref([])
 const filteredData = ref([])
 const loading = ref(false)
 const page = ref(1)
-const perPage = 15
+const perPage = 20
 
 // ---------- Computed ----------
 const totalPages = computed(() => Math.ceil(filteredData.value.length / perPage) || 1)
@@ -789,28 +789,37 @@ async function exportPdf() {
   background: #f9f0e3;
 }
 
-/* ===== TABLE CONTAINER – only this should scroll ===== */
+/* ===== TABLE CONTAINER – fixed height + vertical scroll ===== */
 .table-wrapper {
   background: white;
   border-radius: 16px;
   padding: 10px;
   box-shadow: 0 4px 12px rgba(0, 20, 30, 0.08);
   border: 1px solid #e8dccc;
-  overflow-x: auto;          /* horizontal scroll bar when needed */
+  overflow-x: auto;
+  overflow-y: auto;          /* Enable vertical scroll */
+  max-height: 500px;         /* Fixed height – adjust as needed */
   -webkit-overflow-scrolling: touch;
-  max-width: 100%;           /* ensure it doesn't exceed its parent */
+  max-width: 100%;
 }
 
-/* ===== TABLE – no forced min-width, let it shrink/grow ===== */
+/* ===== TABLE – header sticky ===== */
 .findings-table {
-  width: auto;               /* let columns define width */
-  max-width: 100%;           /* prevent table from exceeding container */
+  width: auto;
+  max-width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  white-space: nowrap;       /* text on one line → forces horizontal scroll when columns are many */
+  white-space: nowrap;
 }
+
+.findings-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
 .findings-table thead th {
-  background: #f1ede8;
+  background: #f1ede8;      /* Solid background to cover content behind */
   color: #2c3e4f;
   font-weight: 600;
   font-size: 12px;
