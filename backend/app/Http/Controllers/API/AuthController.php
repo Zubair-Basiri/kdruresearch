@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
+use App\Services\MailConfigurator;
 
 class AuthController extends Controller
 {
@@ -217,19 +218,19 @@ class AuthController extends Controller
      */
 
     public function sendResetLinkEmail(Request $request)
-    {
-        $request->validate(['email' => 'required|email|exists:users,email']);
+{
+    $request->validate(['email' => 'required|email|exists:users,email']);
 
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+    MailConfigurator::apply();   // <-- apply runtime config
 
-        if ($status === Password::RESET_LINK_SENT) {
-            return response()->json(['message' => __($status)], 200);
-        }
+    $status = Password::sendResetLink($request->only('email'));
 
-        return response()->json(['message' => __($status)], 400);
+    if ($status === Password::RESET_LINK_SENT) {
+        return response()->json(['message' => __($status)], 200);
     }
+
+    return response()->json(['message' => __($status)], 400);
+}
 
     /**
      * Reset the given user's password.

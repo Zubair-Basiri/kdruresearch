@@ -86,16 +86,20 @@ class AcademicPaperController extends Controller
             }
         }
 
-        if (isset($data['title']) || isset($data['author_position'])) {
-            $title = $data['title'] ?? $academicPaper->title;
-            $authorPos = $data['author_position'] ?? $academicPaper->author_position;
-            $language = $data['language'] ?? $academicPaper->language;
-            // Exclude the current academic paper from the check
-            $result = $this->duplicateService->findDuplicate($title, $authorPos, $language, $academicPaper->id, 'academic');
-            if ($result) {
-                return $this->duplicateResponse($result);
-            }
-        }
+        if (
+    isset($data['title']) &&
+    $data['title'] !== $academicPaper->title &&
+    $this->duplicateService->isSubstantiallyDifferent($academicPaper->title, $data['title'])
+) {
+    $title = $data['title'];
+    $authorPos = $data['author_position'] ?? $academicPaper->author_position;
+    $language = $data['language'] ?? $academicPaper->language;
+    // Exclude the current academic paper from the check
+    $result = $this->duplicateService->findDuplicate($title, $authorPos, $language, $academicPaper->id, 'academic');
+    if ($result) {
+        return $this->duplicateResponse($result);
+    }
+}
 
         $academicPaper->update($data);
         return response()->json($academicPaper);

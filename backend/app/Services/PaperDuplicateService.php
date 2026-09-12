@@ -34,76 +34,97 @@ class PaperDuplicateService
 
     // ---------- MAIN ENTRY POINT ----------
     public function findDuplicate(
-        string $title,
-        ?string $authorPosition,
-        ?string $language,
-        ?int $excludeId = null,
-        ?string $excludeTable = null
-    ): ?array {
-        Log::info('DUPLICATE CHECK START', [
-            'title' => $title,
-            'author_position' => $authorPosition,
-            'language' => $language,
-            'exclude_id' => $excludeId,
-            'exclude_table' => $excludeTable,
-        ]);
+    string $title,
+    ?string $authorPosition,
+    ?string $language,
+    ?int $excludeId = null,
+    ?string $excludeTable = null,
+    ?array $tablesToCheck = null
+): ?array {
+    Log::info('DUPLICATE CHECK START', [
+        'title' => $title,
+        'author_position' => $authorPosition,
+        'language' => $language,
+        'exclude_id' => $excludeId,
+        'exclude_table' => $excludeTable,
+        'tables_to_check' => $tablesToCheck,
+    ]);
 
-        $normalizedLanguage = $this->normalizer->normalizeLanguage($language);
-        $normalizedAuthorPosition = $this->normalizeAuthorPosition($authorPosition);
+    $normalizedLanguage = $this->normalizer->normalizeLanguage($language);
+    $normalizedAuthorPosition = $this->normalizeAuthorPosition($authorPosition);
 
-        $rawPositions = $normalizedAuthorPosition !== null
-            ? ($this->authorPosMapping[$normalizedAuthorPosition] ?? [])
-            : [null];
+    $rawPositions = $normalizedAuthorPosition !== null
+        ? ($this->authorPosMapping[$normalizedAuthorPosition] ?? [])
+        : [null];
 
-        $candidates = $this->fetchCandidates($rawPositions, $excludeId, $excludeTable);
+    $candidates = $this->fetchCandidates($rawPositions, $excludeId, $excludeTable, $tablesToCheck);
 
-        if (empty($candidates)) {
-            Log::info('No candidates found, skipping duplicate check.');
-            return null;
-        }
-
-        $incomingNormalized = $this->normalizer->normalizeExact($title);
-
-        // 1. Exact match
-        foreach ($candidates as $candidate) {
-            $existingNormalized = $this->normalizer->normalizeExact($candidate['title']);
-            if ($existingNormalized === $incomingNormalized) {
-                Log::info('EXACT DUPLICATE FOUND', ['candidate' => $candidate]);
-                return $this->buildResult('exact', 100, $candidate);
-            }
-        }
-
-        // 2. Same‑language lexical
-        $sameLangCandidates = array_filter($candidates, function ($c) use ($normalizedLanguage) {
-            $cLang = $this->normalizer->normalizeLanguage($c['language'] ?? null);
-            return $cLang !== null && $cLang === $normalizedLanguage;
-        });
-
-        if (!empty($sameLangCandidates)) {
-            $result = $this->checkSameLanguage($incomingNormalized, $title, $sameLangCandidates);
-            if ($result) {
-                Log::info('SAME LANGUAGE DUPLICATE FOUND', ['result' => $result]);
-                return $result;
-            }
-        }
-
-        // 3. Cross‑language
-        $crossLangCandidates = array_filter($candidates, function ($c) use ($normalizedLanguage) {
-            $cLang = $this->normalizer->normalizeLanguage($c['language'] ?? null);
-            return $cLang === null || $cLang !== $normalizedLanguage;
-        });
-
-        if (!empty($crossLangCandidates)) {
-            $result = $this->checkCrossLanguage($title, $crossLangCandidates, $normalizedLanguage);
-            if ($result) {
-                Log::info('CROSS LANGUAGE DUPLICATE FOUND', ['result' => $result]);
-                return $result;
-            }
-        }
-
-        Log::info('No duplicate found.');
+    if (empty($candidates)) {
+        Log::info('No candidates found, skipping duplicate check.');
         return null;
     }
+
+    $incomingNormalized = $this->normalizer->normalizeExact($title);
+
+    // 1. Exact match
+    foreach ($candidates as $candidate) {
+        $existingNormalized = $this->normalizer->normalizeExact($candidate['title']);
+        if ($existingNormalized === $incomingNormalized) {
+            Log::info('EXACT DUPLICATE FOUND', ['candidate' => $candidate]);
+            return $this->buildResult('exact', 100, $candidate);
+        }
+    }
+
+    // 2. Same‑language lexical
+    $sameLangCandidates = array_filter($candidates, function ($c) use ($normalizedLanguage) {
+        $cLang = $this->normalizer->normalizeLanguage($c['language'] ?? null);
+        return $cLang !== null && $cLang === $normalizedLanguage;
+    });
+
+    if (!empty($sameLangCandidates)) {
+        $result = $this->checkSameLanguage($incomingNormalized, $title, $sameLangCandidates);
+        if ($result) {
+            Log::info('SAME LANGUAGE DUPLICATE FOUND', ['result' => $result]);
+            return $result;
+        }
+    }
+
+    // 3. Cross‑language
+    $crossLangCandidates = array_filter($candidates, function ($c) use ($normalizedLanguage) {
+        $cLang = $this->normalizer->normalizeLanguage($c['language'] ?? null);
+        return $cLang === null || $cLang !== $normalizedLanguage;
+    });
+
+    if (!empty($crossLangCandidates)) {
+        $result = $this->checkCrossLanguage($title, $crossLangCandidates, $normalizedLanguage);
+        if ($result) {
+            Log::info('CROSS LANGUAGE DUPLICATE FOUND', ['result' => $result]);
+            return $result;
+        }
+    }
+
+    Log::info('No duplicate found.');
+    return null;
+    }
+
+    public function isSubstantiallyDifferent(string $oldTitle, string $newTitle, float $threshold = 0.6): bool
+{
+    $oldNorm = $this->normalizer->normalizeExact($oldTitle);
+    $newNorm = $this->normalizer->normalizeExact($newTitle);
+
+    if ($oldNorm === $newNorm) {
+        return false; // identical after normalization
+    }
+
+    $oldTokens = $this->normalizer->tokenize($oldNorm);
+    $newTokens = $this->normalizer->tokenize($newNorm);
+
+    $similarity = $this->normalizer->jaccardSimilarity($oldTokens, $newTokens);
+
+    // If similarity is below the threshold, the change is substantial → run the duplicate check.
+    // If similarity is at/above the threshold, it's just a refinement → skip.
+    return $similarity < $threshold;
+}
 
     // ---------- CROSS‑LANGUAGE ORCHESTRATOR ----------
     protected function checkCrossLanguage(string $incomingRaw, array $candidates, ?string $normalizedLanguage): ?array
@@ -376,15 +397,29 @@ class PaperDuplicateService
     }
 
     // ---------- CANDIDATE FETCHING ----------
-    protected function fetchCandidates(array $rawPositions, ?int $excludeId, ?string $excludeTable): array
-    {
-        $universityId = currentUniversityId();
+    protected function fetchCandidates(
+    array $rawPositions,
+    ?int $excludeId,
+    ?string $excludeTable,
+    ?array $tablesToCheck = null
+): array {
+    $universityId = currentUniversityId();
 
-        Log::info('Fetching candidates with raw positions', ['rawPositions' => $rawPositions, 'universityId' => $universityId]);
+    // Decide which tables to scan
+    $checkSubmitted = $tablesToCheck === null || in_array('submitted', $tablesToCheck, true);
+    $checkAcademic  = $tablesToCheck === null || in_array('academic', $tablesToCheck, true);
 
-        $candidates = [];
+    Log::info('Fetching candidates', [
+        'rawPositions' => $rawPositions,
+        'universityId' => $universityId,
+        'check_submitted' => $checkSubmitted,
+        'check_academic' => $checkAcademic,
+    ]);
 
-        // Submitted papers
+    $candidates = [];
+
+    // ---------- Submitted papers ----------
+    if ($checkSubmitted) {
         $submittedQuery = SubmittedPaper::query();
         if (empty($rawPositions) || (count($rawPositions) === 1 && $rawPositions[0] === null)) {
             if (in_array(null, $rawPositions, true)) {
@@ -407,8 +442,10 @@ class PaperDuplicateService
         foreach ($submitted as $row) {
             $candidates[] = array_merge($row, ['table' => 'submitted_papers']);
         }
+    }
 
-        // Academic papers (exclude soft‑deleted)
+    // ---------- Academic papers ----------
+    if ($checkAcademic) {
         $academicQuery = AcademicPaper::withoutTrashed();
         if (empty($rawPositions) || (count($rawPositions) === 1 && $rawPositions[0] === null)) {
             if (in_array(null, $rawPositions, true)) {
@@ -431,9 +468,10 @@ class PaperDuplicateService
         foreach ($academic as $row) {
             $candidates[] = array_merge($row, ['table' => 'academic_papers']);
         }
+    }
 
-        Log::info('Fetched candidates', ['count' => count($candidates)]);
-        return $candidates;
+    Log::info('Fetched candidates', ['count' => count($candidates)]);
+    return $candidates;
     }
 
     // ---------- AUTHOR POSITION NORMALIZATION ----------

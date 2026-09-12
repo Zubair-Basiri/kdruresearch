@@ -99,13 +99,16 @@ class SubmittedPaperController extends Controller
 
         // ---- DUPLICATE CHECK ----
         $result = $this->duplicateService->findDuplicate(
-            $validated['title'],
-            $validated['author_position'] ?? null,
-            $validated['language'] ?? null 
-        );
-        if ($result) {
-            return $this->duplicateResponse($result);
-        }
+    $validated['title'],
+    $validated['author_position'] ?? null,
+    $validated['language'] ?? null,
+    null,             
+    null,             
+    ['academic'] // only check academic_papers
+);
+if ($result) {
+    return $this->duplicateResponse($result);
+}
 
         $submission = SubmittedPaper::create([
             'lecturer_id' => $lecturerId,
@@ -147,23 +150,27 @@ class SubmittedPaperController extends Controller
         ]);
 
         $universityId = currentUniversityId();
-        if ($universityId) {
-            $lecturer = $academicPaper->lecturer;
-            if (!$lecturer || $lecturer->university_id != $universityId) {
-                return response()->json(['message' => 'Unauthorized'], 403);
-            }
-        }
+if ($universityId) {
+    $lecturer = $submittedPaper->lecturer;
+    if (!$lecturer || $lecturer->university_id != $universityId) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+}
 
         // Run duplicate check only if title or author_position changed
-        if (isset($validated['title']) || isset($validated['author_position'])) {
-            $title = $validated['title'] ?? $submittedPaper->title;
-            $authorPos = $validated['author_position'] ?? $submittedPaper->author_position;
-            $language = $validated['language'] ?? $submittedPaper->language;
-            $result = $this->duplicateService->findDuplicate($title, $authorPos, $language, $submittedPaper->id, 'submitted');
-            if ($result) {
-                return $this->duplicateResponse($result);
-            }
-        }
+        if (
+    isset($validated['title']) &&
+    $validated['title'] !== $submittedPaper->title &&
+    $this->duplicateService->isSubstantiallyDifferent($submittedPaper->title, $validated['title'])
+) {
+    $title = $validated['title'];
+    $authorPos = $validated['author_position'] ?? $submittedPaper->author_position;
+    $language = $validated['language'] ?? $submittedPaper->language;
+    $result = $this->duplicateService->findDuplicate($title, $authorPos, $language, $submittedPaper->id, 'submitted');
+    if ($result) {
+        return $this->duplicateResponse($result);
+    }
+}
 
         $submittedPaper->update($validated);
         return response()->json($submittedPaper);

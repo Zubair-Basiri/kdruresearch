@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\UserApprovedMail;
 use Illuminate\Support\Facades\Log;
+use App\Services\MailConfigurator;
 
 class UserController extends Controller
 {
@@ -257,7 +258,6 @@ class UserController extends Controller
         $user = Auth::user();
         $targetUser = User::findOrFail($id);
 
-        // Check permission
         if ($user->role === 'ministry_authority') {
             // Can update any user
         } elseif (in_array($user->role, ['super_admin', 'admin'])) {
@@ -271,11 +271,20 @@ class UserController extends Controller
         $targetUser->is_approved = !$targetUser->is_approved;
         $targetUser->save();
 
+        // If approved → send email with runtime mail configuration
         if ($targetUser->is_approved) {
             try {
+                // Apply Gmail SMTP config at runtime
+                MailConfigurator::apply();
+
                 Mail::to($targetUser->email)->send(new UserApprovedMail($targetUser));
-            } catch (\Exception $e) {
-                Log::error('Approval email failed: ' . $e->getMessage());
+
+            } catch (\Throwable $e) {
+                Log::error('Approval email failed: ' . $e->getMessage(), [
+                    'user_id' => $targetUser->id,
+                    'email'   => $targetUser->email,
+                ]);
+
                 return response()->json([
                     'message' => 'User approval status updated but email failed: ' . $e->getMessage(),
                     'is_approved' => $targetUser->is_approved,
