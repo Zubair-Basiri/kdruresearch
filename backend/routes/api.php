@@ -38,7 +38,7 @@ Route::get('/sanctum/csrf-cookie', function () {
 Route::get('lecturers-for-dropdown', [LecturerController::class, 'forDropdown']);
 Route::post('/guest-login', [AuthController::class, 'guestLogin']);
 Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Routes for all authenticated users (including lecturers and guests)
 Route::middleware(['auth:sanctum'])->group(function () {

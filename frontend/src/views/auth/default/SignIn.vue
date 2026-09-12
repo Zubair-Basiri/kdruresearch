@@ -1,95 +1,95 @@
 <template>
   <section class="login-content">
-    <b-row class="m-0 align-items-stretch min-vh-100">
-      <b-col md="12" class="d-flex align-items-center bg-white p-5">
-        <b-row class="justify-content-center w-100">
-          <b-col md="10" lg="8" xl="7">
-            <b-card class="border-0 shadow auth-card" body-class="p-4 p-lg-5" no-body>
-              <!-- Logo and header -->
-              <div class="text-center mb-4">
-                <router-link :to="{ name: 'default.dashboard' }" class="navbar-brand d-inline-flex align-items-center text-primary text-decoration-none">
-                  <brand-logo></brand-logo>
-                  <h4 class="logo-title ms-2 mb-0 fw-semibold">
-                    <brand-name></brand-name>
-                  </h4>
-                </router-link>
-                <h3 class="mt-4 mb-1 fw-bold" style="font-size: 22px; color: #2b66a1;">
-                  Welcome To Research Database System
-                </h3>
+    <div class="split-layout">
+      <!-- LEFT: Login Form -->
+      <div class="form-side">
+        <b-card class="border-0 shadow auth-card" body-class="p-4 p-lg-5" no-body>
+          <!-- Logo and header -->
+          <div class="text-center mb-4">
+            <router-link :to="{ name: 'default.dashboard' }" class="navbar-brand d-inline-flex align-items-center text-primary text-decoration-none">
+              <brand-logo></brand-logo>
+              <h4 class="logo-title ms-2 mb-0 fw-semibold">
+                <brand-name></brand-name>
+              </h4>
+            </router-link>
+            <h3 class="mt-4 mb-1 fw-bold" style="font-size: 22px; color: #2b66a1;">
+              Welcome To Research Database System
+            </h3>
+          </div>
+
+          <!-- Login form -->
+          <form @submit.prevent="handleLogin">
+            <div class="mb-4">
+              <label for="email" class="form-label fw-medium text-secondary">Email address</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0">
+                  <i class="bi bi-envelope"></i>
+                </span>
+                <input type="email" class="form-control border-start-0 ps-0" id="email"
+                       v-model="form.email" placeholder="name@xyz.abc" required />
               </div>
+            </div>
 
-              <!-- Login form -->
-              <form @submit.prevent="handleLogin">
-                <div class="mb-4">
-                  <label for="email" class="form-label fw-medium text-secondary">Email address</label>
-                  <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0">
-                      <i class="bi bi-envelope"></i>
-                    </span>
-                    <input type="email" class="form-control border-start-0 ps-0" id="email"
-                           v-model="form.email" placeholder="name@xyz.abc" required />
-                  </div>
-                </div>
+            <div class="mb-4">
+              <label for="password" class="form-label fw-medium text-secondary">Password</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0">
+                  <i class="bi bi-lock"></i>
+                </span>
+                <input type="password" class="form-control border-start-0 ps-0" id="password"
+                       v-model="form.password" placeholder="••••••••" required />
+              </div>
+            </div>
 
-                <div class="mb-4">
-                  <label for="password" class="form-label fw-medium text-secondary">Password</label>
-                  <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0">
-                      <i class="bi bi-lock"></i>
-                    </span>
-                    <input type="password" class="form-control border-start-0 ps-0" id="password"
-                           v-model="form.password" placeholder="••••••••" required />
-                  </div>
-                </div>
+            <!-- Error message -->
+            <div v-if="error" class="alert alert-danger py-2" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              {{ error }}
+            </div>
 
-                <!-- Error message -->
-                <div v-if="error" class="alert alert-danger py-2" role="alert">
-                  <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                  {{ error }}
-                </div>
+            <div class="d-grid gap-2 mt-3">
+              <button type="submit" class="btn btn-primary py-3 fw-semibold rounded-3"
+                      :disabled="authStore.loading">
+                <span v-if="authStore.loading" class="spinner-border spinner-border-sm me-2"
+                      role="status" aria-hidden="true"></span>
+                {{ authStore.loading ? 'Signing in...' : 'Sign In' }}
+              </button>
+            </div>
 
-                <div class="d-grid gap-2 mt-5">
-                  <button type="submit" class="btn btn-primary py-3 fw-semibold rounded-3"
-                          :disabled="authStore.loading">
-                    <span v-if="authStore.loading" class="spinner-border spinner-border-sm me-2"
-                          role="status" aria-hidden="true"></span>
-                    {{ authStore.loading ? 'Signing in...' : 'Sign In' }}
-                  </button>
-                </div>
+            <!-- Register link -->
+            <p class="mt-4 text-center text-muted">
+              Don't have an account?
+              <router-link :to="{ name: 'auth.user-register' }" class="text-primary fw-medium text-decoration-none">
+                Register here
+              </router-link>
+            </p>
 
-                <!-- Register link -->
-                <p class="mt-4 text-center text-muted">
-                  Don't have an account?
-                  <router-link :to="{ name: 'auth.user-register' }" class="text-primary fw-medium text-decoration-none">
-                    Register here
-                  </router-link>
-                </p>
+            <p class="mt-2 text-center">
+              <router-link :to="{ name: 'auth.forgot-password' }" class="text-primary fw-medium text-decoration-none">
+                Forgot your password?
+              </router-link>
+            </p>
 
-                <p class="mt-2 text-center">
-                 <router-link :to="{ name: 'auth.forgot-password' }" class="text-primary fw-medium text-decoration-none">
-                   Forgot your password?
-                 </router-link>
-                </p>
+            <p class="mt-2 text-center">
+              <a href="#" class="text-primary fw-medium text-decoration-none" @click.prevent="guestLogin">
+                Or login as a guest
+              </a>
+            </p>
 
-                <p class="mt-2 text-center">
-                  <a href="#" class="text-primary fw-medium text-decoration-none" @click.prevent="guestLogin">
-                    Or login as a guest
-                  </a>
-                </p>
+            <!-- Designed by footer -->
+            <hr class="my-2" />
+            <p class="text-center footer-credit small">
+              Conceptualized and designed by <strong>Dr. Rahmatullah Pashtoon (PhD)</strong>, embodying academic integrity,
+              innovation, and a vision for empowering research and institutional excellence. ©
+              {{ new Date().getFullYear() }}
+            </p>
+          </form>
+        </b-card>
+      </div>
 
-                <!-- Designed by footer -->
-                <hr class="my-4" />
-                <p class="text-center footer-credit small">
-                  Conceptualized and designed by <strong>Dr. Rahmatullah Pashtoon (PhD)</strong>, embodying academic integrity,
-                  innovation, and a vision for empowering research and institutional excellence. ©
-                  {{ new Date().getFullYear() }}
-                </p>
-              </form>
-            </b-card>
-          </b-col>
-        </b-row>
-      </b-col>
-    </b-row>
+      <!-- RIGHT: Image -->
+      <div class="image-side"></div>
+    </div>
   </section>
 </template>
 
@@ -121,7 +121,6 @@ async function guestLogin() {
   error.value = null;
   try {
     await authStore.guestLogin();
-    // Small delay to ensure session is fully set
     await new Promise(resolve => setTimeout(resolve, 100));
     const user = authStore.user;
     if (user?.university_id) {
@@ -130,7 +129,6 @@ async function guestLogin() {
       router.push({ name: 'university-selector' });
     }
   } catch (err) {
-    // Log the actual error for debugging
     console.error('Guest login error:', err);
     error.value = authStore.error || 'Guest login failed. Please try again.';
   }
@@ -141,14 +139,37 @@ async function guestLogin() {
 .login-content {
   position: relative;
   min-height: 100vh;
-  background: url('@/assets/images/auth-pro/04.jpg') no-repeat center center fixed;
-  background-size: cover;
   align-items: center;
   padding: 2rem;
 }
 
+/* ===== Split layout: form left, image right ===== */
+.split-layout {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: row; /* form on the left, image on the right */
+}
+
+/* Left column – form */
+.form-side {
+  flex: 0 0 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: #ffffff;
+}
+
+/* Right column – image */
+.image-side {
+  flex: 0 0 50%;
+  background: url('@/assets/images/auth-pro/kdru.jpg') no-repeat center center;
+  background-size: cover;
+}
+
+/* ===== Keep your existing card, inputs, buttons untouched ===== */
 .auth-card {
-  max-width: 650px; /* Changed from 420px to 600px */
+  max-width: 650px;
   margin: 0 auto;
   background: transparent;
 }
@@ -181,12 +202,28 @@ async function guestLogin() {
 
 /* Styled footer credit */
 .footer-credit {
-  color: #f0921f; /* A dark gray-blue for better visibility */
+  color: #f0921f;
   font-weight: 400;
   letter-spacing: 0.3px;
   strong {
-    color: #0dfd41; /* Primary blue for emphasis */
+    color: #0dfd41;
     font-weight: 600;
+  }
+}
+
+/* ===== Responsive: stack on small screens ===== */
+@media (max-width: 991.98px) {
+  .split-layout {
+    flex-direction: column;
+  }
+
+  .form-side,
+  .image-side {
+    flex: 0 0 100%;
+  }
+
+  .image-side {
+    min-height: 40vh;
   }
 }
 </style>

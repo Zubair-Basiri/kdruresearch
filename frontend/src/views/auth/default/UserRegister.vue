@@ -1,12 +1,18 @@
 <template>
   <section class="login-content">
-    <b-row class="m-0 align-items-stretch min-vh-100">
-      <b-col md="12" class="d-flex align-items-center bg-white p-5">
+    <!-- Decorative background shapes -->
+    <div class="bg-shape bg-shape-1"></div>
+    <div class="bg-shape bg-shape-2"></div>
+    <div class="bg-shape bg-shape-3"></div>
+    <div class="bg-shape bg-shape-4"></div>
+
+    <b-row class="m-0 align-items-stretch min-vh-100 position-relative">
+      <b-col md="12" class="d-flex align-items-center p-5">
         <b-row class="justify-content-center w-100">
           <b-col md="10" lg="8" xl="7">
             <b-card class="border-0 shadow auth-card" body-class="p-4 p-lg-5" no-body>
               <!-- Logo and header -->
-              <div class="text-center mb-4">
+              <div class="text-center mb-4 mt-4">
                 <router-link :to="{ name: 'default.dashboard' }" class="navbar-brand d-inline-flex align-items-center text-primary text-decoration-none">
                   <brand-logo></brand-logo>
                   <h4 class="logo-title ms-2 mb-0 fw-semibold">
@@ -100,7 +106,7 @@
                 </div>
 
                 <!-- Submit -->
-                <div class="d-grid gap-2 mt-5">
+                <div class="d-grid gap-2 mt-3">
                   <button type="submit" class="btn btn-primary py-3 fw-semibold rounded-3"
                           :disabled="loading || !selectedLecturer">
                     <span v-if="loading" class="spinner-border spinner-border-sm me-2"
@@ -110,7 +116,7 @@
                 </div>
 
                 <!-- Login link -->
-                <p class="mt-4 text-center text-muted">
+                <p class="mt-2 text-center text-muted">
                   Already have an account?
                   <router-link :to="{ name: 'auth.login' }" class="text-primary fw-medium text-decoration-none">
                     Sign In
@@ -118,7 +124,7 @@
                 </p>
 
                 <!-- Designed by footer -->
-                <hr class="my-4" />
+                <hr class="my-2" />
                 <p class="text-center footer-credit small">
                   Conceptualized and designed by <strong>Dr. Rahmatullah Pashtoon (PhD)</strong>, embodying academic integrity,
                   innovation, and a vision for empowering research and institutional excellence. ©
@@ -153,7 +159,7 @@ const validationErrors = ref([]);
 const lecturers = ref([]);
 const selectedLecturer = ref(null);
 
-const lecturerOptions = computed(() => 
+const lecturerOptions = computed(() =>
   lecturers.value.map(lect => ({
     id: lect.id,
     label: lect.lecturername,
@@ -202,7 +208,6 @@ async function handleRegister() {
     router.push({ name: 'auth.login' });
   } catch (err) {
     if (err.response?.data?.errors?.email) {
-      // Email already taken – show a custom alert
       alert('This email is already registered. Please use a different email or sign in.');
       validationErrors.value = ['Email already taken.'];
     } else if (err.response?.data?.errors) {
@@ -222,20 +227,72 @@ onMounted(fetchLecturers);
 <style src="vue-multiselect/dist/vue-multiselect.css"></style>
 
 <style lang="scss" scoped>
-/* Same styles as SignIn.vue – copied below */
+/* ===== Page background with soft decorative gradient ===== */
 .login-content {
   position: relative;
   min-height: 100vh;
-  background: url('@/assets/images/auth-pro/04.jpg') no-repeat center center fixed;
-  background-size: cover;
-  align-items: center;
+  overflow: hidden;
   padding: 2rem;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 50%, #f0f9ff 100%);
 }
 
+/* ===== Floating decorative blobs / shapes ===== */
+.bg-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bg-shape-1 {
+  width: 420px;
+  height: 420px;
+  background: #93c5fd;
+  top: -120px;
+  left: -120px;
+}
+
+.bg-shape-2 {
+  width: 380px;
+  height: 380px;
+  background: #a5b4fc;
+  bottom: -140px;
+  right: -100px;
+}
+
+.bg-shape-3 {
+  width: 300px;
+  height: 300px;
+  background: #bae6fd;
+  top: 40%;
+  left: 45%;
+  opacity: 0.4;
+}
+
+.bg-shape-4 {
+  width: 260px;
+  height: 260px;
+  background: #c7d2fe;
+  top: 10%;
+  right: 15%;
+  opacity: 0.35;
+}
+
+/* Ensure content sits above shapes */
+.login-content > .row {
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== Existing card, inputs, buttons – unchanged ===== */
 .auth-card {
   max-width: 650px;
   margin: 0 auto;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-radius: 1.25rem;
 }
 
 .input-group-text {
@@ -301,6 +358,10 @@ onMounted(fetchLecturers);
 @media (max-width: 768px) {
   .auth-card {
     margin: 1rem;
+  }
+  .bg-shape {
+    filter: blur(60px);
+    opacity: 0.45;
   }
 }
 </style>
