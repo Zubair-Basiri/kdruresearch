@@ -79,6 +79,7 @@ class LecturerController extends Controller
             'qualification'=> 'nullable|string|max:255',
             'specialized_area' => 'nullable|array',
             'user_id'      => 'nullable|exists:users,id',
+            'exclude_from_top_researchers' => 'sometimes|boolean',
         ]);
 
         $universityId = $validated['university_id'];
@@ -110,6 +111,9 @@ class LecturerController extends Controller
                 return response()->json(['message' => 'Invalid department for this university'], 422);
             }
         }
+
+        $validated['exclude_from_top_researchers'] =
+            $request->boolean('exclude_from_top_researchers');
 
         $lecturer = Lecturer::create($validated);
 
@@ -162,6 +166,7 @@ class LecturerController extends Controller
             'qualification'=> 'nullable|string|max:255',
             'specialized_area' => 'nullable|array',
             'user_id'      => 'nullable|exists:users,id',
+            'exclude_from_top_researchers' => 'sometimes|boolean',
         ]);
 
         \Log::info('Update Lecturer Payload', $validated);
@@ -204,6 +209,12 @@ class LecturerController extends Controller
         }
 
         $validated['university_id'] = $universityId;
+
+        if ($request->has('exclude_from_top_researchers')) {
+            $validated['exclude_from_top_researchers'] =
+                $request->boolean('exclude_from_top_researchers');
+        }
+        
         $lecturer->update($validated);
 
         return response()->json($lecturer);
