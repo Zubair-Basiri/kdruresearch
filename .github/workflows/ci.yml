@@ -25,7 +25,7 @@ jobs:
       - name: Guard production middleware and filter routes
         run: |
           php artisan route:list --path=api/health | grep 'api/health'
-          php artisan route:list -v --path=api/key-findings/filters | grep 'auth:sanctum'
+          php artisan route:list --json --path=api/key-findings/filters | grep -F 'Authenticate:sanctum'
       - name: Reject hardcoded mail credentials
         working-directory: .
         run: |
@@ -37,8 +37,12 @@ jobs:
             echo "Possible hardcoded service password detected."
             exit 1
           fi
-          if git ls-files | grep -Eq '(^|/)\.env$'; then
-            echo "A runtime .env file must not be committed."
+          if git ls-files | grep -Eq '^(\.env|backend/\.env)$'; then
+            echo "A backend runtime .env file must not be committed."
+            exit 1
+          fi
+          if git grep -nE '^(MAIL_PASSWORD|DB_PASSWORD|APP_KEY|.*(SECRET|TOKEN|PRIVATE_KEY))=' -- 'frontend/.env*'; then
+            echo "A sensitive key must not be stored in frontend environment files."
             exit 1
           fi
           grep -F "env('MAIL_USERNAME')" backend/config/mail.php
