@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\UserApprovedMail;
 use Illuminate\Support\Facades\Log;
-use App\Services\MailConfigurator;
 
 class UserController extends Controller
 {
@@ -271,12 +270,9 @@ class UserController extends Controller
         $targetUser->is_approved = !$targetUser->is_approved;
         $targetUser->save();
 
-        // If approved → send email with runtime mail configuration
+        // If approved, send the email using environment-backed mail settings.
         if ($targetUser->is_approved) {
             try {
-                // Apply Gmail SMTP config at runtime
-                MailConfigurator::apply();
-
                 Mail::to($targetUser->email)->send(new UserApprovedMail($targetUser));
 
             } catch (\Throwable $e) {

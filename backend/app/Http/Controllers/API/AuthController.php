@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
-use App\Services\MailConfigurator;
 
 class AuthController extends Controller
 {
@@ -220,8 +219,6 @@ class AuthController extends Controller
     public function sendResetLinkEmail(Request $request)
 {
     $request->validate(['email' => 'required|email|exists:users,email']);
-
-    MailConfigurator::apply();   // <-- apply runtime config
 
     $status = Password::sendResetLink($request->only('email'));
 
