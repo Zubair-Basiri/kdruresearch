@@ -92,6 +92,25 @@
                   </span>
                 </div>
               </div>
+
+              <!-- NEW: Top Researchers exclusion toggle -->
+              <div class="col-md-12">
+                <div class="form-check mt-2">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="exclude_from_top_researchers"
+                    v-model="form.exclude_from_top_researchers"
+                  />
+                  <label class="form-check-label fw-semibold" for="exclude_from_top_researchers">
+                    Exclude from Top Researchers ranking
+                  </label>
+                  <small class="text-muted d-block">
+                    When checked, this lecturer is removed before ranking is calculated and will not
+                    receive an overall or faculty rank. Research records are not affected.
+                  </small>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -129,7 +148,8 @@ const form = reactive({
   department_id: '',
   grade: '',
   qualification: '',
-  specialized_area: []
+  specialized_area: [],
+  exclude_from_top_researchers: false   // ← NEW
 })
 
 // Static lists
@@ -197,6 +217,7 @@ const fetchLecturer = async () => {
     form.grade = l.grade || ''
     form.qualification = l.qualification || ''
     form.specialized_area = l.specialized_area || []
+    form.exclude_from_top_researchers = !!l.exclude_from_top_researchers   // ← NEW
     // Wait for DOM update to ensure select options are rendered
     await nextTick()
   } catch (err) { console.error(err) }
@@ -348,7 +369,6 @@ onMounted(async () => {
 /* ===================================================== PREMIUM DARK MODE – BASE ===================================================== */
 [data-bs-theme='dark'] .teacher-form {
   background-color: #020617;
-  /* deep navy */
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
 }
 

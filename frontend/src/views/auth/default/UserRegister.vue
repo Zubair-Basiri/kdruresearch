@@ -44,18 +44,31 @@
                       label="label"
                       track-by="id"
                       class="multiselect-custom w-100"
+                      style="font-size: 12px !important;"
                     >
+                      <!-- Dropdown option row -->
                       <template #option="{ option }">
                         <strong>{{ option.label }}</strong>
-                        <span v-if="option.faculty" class="text-muted ms-2">({{ option.faculty }})</span>
+                        <span class="text-muted ms-1">
+                          ({{ option.faculty }}, {{ option.university }})
+                        </span>
                       </template>
+
+                      <!-- Selected value displayed in the closed box -->
                       <template #singleLabel="{ option }">
                         <strong>{{ option.label }}</strong>
-                        <span v-if="option.faculty" class="text-muted ms-2">({{ option.faculty }})</span>
+                        <span class="text-muted ms-1">
+                          ({{ option.faculty }}, {{ option.university }})
+                        </span>
                       </template>
                     </multiselect>
                   </div>
-                  <small class="text-muted">Please select your name from the list of registered lecturers. If your name does not appear in the list, please submit your details (Full Name, Email, Phone Number, Faculty, Department) by emailing vicechancellor@kdru.edu.af or by contacting +93 771 260 003.</small>
+                  <small class="text-muted">
+                    Please select your name from the list of registered lecturers.
+                    If your name does not appear in the list, please submit your details
+                    (Full Name, Email, Phone Number, Faculty, Department) by emailing
+                    vicechancellor@kdru.edu.af or by contacting +93 771 260 003.
+                  </small>
                 </div>
 
                 <!-- Email -->
@@ -159,18 +172,24 @@ const validationErrors = ref([]);
 const lecturers = ref([]);
 const selectedLecturer = ref(null);
 
+// Prepare dropdown options — includes name, faculty, university, and the university_id
 const lecturerOptions = computed(() =>
-  lecturers.value.map(lect => ({
-    id: lect.id,
-    label: lect.lecturername,
-    faculty: lect.faculty?.facultyname || 'No Faculty',
-  }))
+  lecturers.value
+    .filter(l => (l.lecturername || '').trim().length > 0)   // hide the blank-name row
+    .map(lect => ({
+      id:            lect.id,
+      label:         (lect.lecturername || '').trim(),
+      faculty:       lect.faculty?.facultyname || 'No Faculty',
+      university:    lect.university?.name || 'No University',
+      university_id: lect.university_id,
+    }))
 );
 
 const fetchLecturers = async () => {
   try {
     const res = await api.get('/lecturers-for-dropdown');
-    lecturers.value = res.data.data || [];
+    // Response is a plain array — fall back to res.data.data if wrapped
+    lecturers.value = Array.isArray(res.data) ? res.data : (res.data.data || []);
   } catch (err) {
     console.error('Failed to fetch lecturers', err);
   }
@@ -197,12 +216,13 @@ async function handleRegister() {
   try {
     loading.value = true;
     await api.post('/users', {
-      name: selectedLecturer.value.label,
-      email: form.value.email,
-      password: form.value.password,
+      name:                  selectedLecturer.value.label,
+      email:                 form.value.email,
+      password:              form.value.password,
       password_confirmation: form.value.password_confirmation,
-      role: 'user',
-      lecturer_id: selectedLecturer.value.id,
+      role:                  'user',
+      lecturer_id:           selectedLecturer.value.id,
+      university_id:         selectedLecturer.value.university_id,   // ← send the university
     });
     alert('Registration successful. Please wait for admin approval.');
     router.push({ name: 'auth.login' });
@@ -286,7 +306,7 @@ onMounted(fetchLecturers);
   z-index: 1;
 }
 
-/* ===== Existing card, inputs, buttons – unchanged ===== */
+/* ===== Card ===== */
 .auth-card {
   max-width: 650px;
   margin: 0 auto;
@@ -295,6 +315,7 @@ onMounted(fetchLecturers);
   border-radius: 1.25rem;
 }
 
+/* ===== Inputs ===== */
 .input-group-text {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
@@ -311,6 +332,7 @@ onMounted(fetchLecturers);
   }
 }
 
+/* ===== Multiselect ===== */
 .multiselect-custom {
   flex: 1;
   .multiselect__tags {
@@ -335,6 +357,7 @@ onMounted(fetchLecturers);
   }
 }
 
+/* ===== Primary button ===== */
 .btn-primary {
   background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
   border: none;
@@ -345,6 +368,7 @@ onMounted(fetchLecturers);
   }
 }
 
+/* ===== Footer credit ===== */
 .footer-credit {
   color: #f0921f;
   font-weight: 400;
@@ -355,6 +379,7 @@ onMounted(fetchLecturers);
   }
 }
 
+/* ===== Responsive ===== */
 @media (max-width: 768px) {
   .auth-card {
     margin: 1rem;

@@ -39,6 +39,7 @@
                 <th class="th-dept">Department</th>
                 <th class="th-grade">Grade</th>
                 <th class="th-qual">Qualification</th>
+                <th class="th-exclude text-center">Top Res.</th>
                 <th class="th-spec">Specialized Area</th>
                 <th class="th-action text-center">Actions</th>
               </tr>
@@ -53,6 +54,10 @@
                 <td>{{ t.department_name }}</td>
                 <td>{{ t.grade }}</td>
                 <td>{{ t.qualification }}</td>
+                <td class="text-center">
+                  <span v-if="t.exclude_from_top_researchers" class="badge bg-danger">Excluded</span>
+                  <span v-else class="badge bg-success">Included</span>
+                </td>
                 <td>{{ t.specialized_area }}</td>
                 <td class="text-center">
                   <template v-if="authStore.canManageUniversityData">
@@ -64,7 +69,7 @@
                 </td>
               </tr>
               <tr v-if="filteredLecturers.length === 0">
-                <td colspan="9" class="text-center text-muted py-3">No results found</td>
+                <td colspan="10" class="text-center text-muted py-3">No results found</td>
               </tr>
             </tbody>
           </table>
@@ -214,6 +219,7 @@ tbody td {
 .th-faculty  { width: 120px; }
 .th-dept     { width: 120px; }
 .th-grade    { width: 110px; }
+.th-exclude  { width: 90px; }
 .th-action   { width: 110px; }
 
 /* =========================
@@ -344,7 +350,7 @@ tbody td {
    RESPONSIVE ADJUSTMENTS
 ========================= */
 @media (max-width: 1200px) {
-  .th-name, .th-univ, .th-faculty, .th-dept, .th-grade, .th-qual, .th-spec, .th-action {
+  .th-name, .th-univ, .th-faculty, .th-dept, .th-grade, .th-qual, .th-spec, .th-exclude, .th-action {
     font-size: 0.7rem;
     padding: 0.35rem 0.4rem;
   }
@@ -375,7 +381,7 @@ tbody td {
   .th-univ { min-width: 80px; }
   .th-faculty { min-width: 80px; }
   .th-dept { min-width: 80px; }
-  .th-grade, .th-qual, .th-spec, .th-action { min-width: 60px; }
+  .th-grade, .th-qual, .th-spec, .th-exclude, .th-action { min-width: 60px; }
 }
 
 @media (max-width: 768px) {
@@ -409,7 +415,7 @@ tbody td {
 @media (max-width: 576px) {
   .th-name { min-width: 90px; }
   .th-univ, .th-faculty, .th-dept { min-width: 70px; }
-  .th-grade, .th-qual, .th-spec, .th-action { min-width: 50px; }
+  .th-grade, .th-qual, .th-spec, .th-exclude, .th-action { min-width: 50px; }
 
   .btn-add {
     padding: 0.2rem 0.35rem;
@@ -434,5 +440,4 @@ tbody td {
     align-items: stretch;
   }
 }
-
 </style>

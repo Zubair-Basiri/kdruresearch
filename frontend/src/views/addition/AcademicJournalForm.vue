@@ -90,8 +90,7 @@
                     <option value="Conference Paper (Proceedings)">Conference Paper (Proceedings)</option>
                     <option value="Conference Presentation (Abstract/Paper)">Conference Presentation (Abstract/Paper)</option>
                     <option value="Workshop Paper">Workshop Paper</option>
-                    <option value="Book (Authored)">Book (Authored)</option>
-                    <option value="Book (Edited Volume)">Book (Edited Volume)</option>
+                    <option value="Digital Course">Digital Course</option>
                     <option value="Book Chapter">Book Chapter</option>
                     <option value="Research Report">Research Report</option>
                     <option value="Policy Brief">Policy Brief</option>

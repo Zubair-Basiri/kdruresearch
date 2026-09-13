@@ -133,6 +133,7 @@ class TopResearchersController extends Controller
             ->leftJoin('universities', 'faculties.university_id', '=', 'universities.id')
             ->where('academic_papers.status', 'Published')
             ->whereNull('academic_papers.deleted_at')
+            ->where('lecturers.exclude_from_top_researchers', false)
             ->select(
                 'lecturers.id as lecturer_id',
                 'lecturers.lecturername',
@@ -220,7 +221,7 @@ class TopResearchersController extends Controller
                 DB::raw("SUM(academic_papers.citation) as total_citations"),
 
                 // 23. Digital Course Development – sum from another table or column
-                DB::raw("0 as digital_course_development")     // replace with actual sum
+                DB::raw("SUM(CASE WHEN academic_papers.publication = 'Digital Course' THEN 1 ELSE 0 END) as digital_course_development"),
             )
             ->groupBy('lecturers.id', 'lecturers.lecturername', 'faculties.facultyname', 'departments.deptname', 'lecturers.grade', 'universities.name');
 

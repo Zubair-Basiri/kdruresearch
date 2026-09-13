@@ -18,11 +18,13 @@ class Lecturer extends Model
         'grade',
         'qualification',
         'specialized_area',
-        'user_id'
+        'user_id',
+        'exclude_from_top_researchers',
     ];
 
     protected $casts = [
         'specialized_area' => 'array',
+        'exclude_from_top_researchers' => 'boolean',
     ];
 
     public function university() { return $this->belongsTo(University::class); }

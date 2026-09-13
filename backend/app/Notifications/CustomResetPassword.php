@@ -24,6 +24,6 @@ class CustomResetPassword extends ResetPassword
             ->action('Reset Password', $url)
             ->line("This password reset link will expire in {$expire} minutes.")
             ->line('If you did not request a password reset, no further action is required.')
-            ->salutation('Regards,\nVice Chancellery of Research');
+            ->salutation('Regards, Vice Chancellery of Research');
     }
 }
