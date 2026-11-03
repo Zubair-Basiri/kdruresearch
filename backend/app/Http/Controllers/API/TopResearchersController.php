@@ -56,56 +56,53 @@ class TopResearchersController extends Controller
 
     public function index(Request $request)
     {
-        // Fetch all researchers with their metrics.
-        $researchers = $this->fetchResearchersWithMetrics();
+        // Accept ?year=2024 or ?year=all (or empty)
+        $year = $request->query('year');
+        $year = ($year === null || $year === '' || $year === 'all') ? null : (int) $year;
 
-        // Compute weighted score for each researcher
+        // Fetch metrics (year filter applied inside the aggregate query)
+        $researchers = $this->fetchResearchersWithMetrics($year);
+
         foreach ($researchers as &$r) {
             $r['weighted_score'] = $this->calculateWeightedScore($r, $this->config);
         }
 
-        // Assign ranks
         $this->assignRanks($researchers);
-
-        // Assign faculty ranks
         $this->assignFacultyRanks($researchers);
 
-        // Transform to the format expected by the Vue component
         $formatted = array_map(function ($r) {
             return [
-                'id' => $r['lecturer_id'],
+                'id'              => $r['lecturer_id'],
                 'Researcher Name' => $r['lecturername'],
                 'Faculty'         => $r['facultyname'],
                 'Department'      => $r['deptname'],
                 'Academic Grade'  => $r['grade'],
                 'University'      => $r['university_name'] ?? '',
 
-                // All 23 metrics – keys must match the Vue fields array
                 'Non-indexed National Conference Proceedings' => $r['non_indexed_national_conference'],
-                'Total Indexed Conference Proceedings'       => $r['total_indexed_conference'],
+                'Total Indexed Conference Proceedings'        => $r['total_indexed_conference'],
                 'Total Book Chapters'                         => $r['total_book_chapters'],
                 'Books Published (Academic)'                  => $r['books_published_academic'],
                 'Books Published (Non-academic)'              => $r['books_published_non_academic'],
                 'Non-indexed International Conference Proceedings' => $r['non_indexed_international_conference'],
                 'Total International Conference Poster Presentation' => $r['total_international_poster'],
-                'Book Translations'                            => $r['book_translations'],
-                'National Publications'                        => $r['national_publications'],
-                'Q1 Indexed'                                   => $r['q1_indexed'],
-                'Q2 Indexed'                                   => $r['q2_indexed'],
-                'Q3 Indexed'                                   => $r['q3_indexed'],
-                'Q4 Indexed'                                   => $r['q4_indexed'],
-                'Other Recognized Index'                       => $r['other_recognized_index'],
-                'Internationally Peer Reviewed Journals'       => $r['internationally_peer_reviewed'],
-                '1st Author Position'                          => $r['first_author'],
-                '2nd and 3rd Author Position'                  => $r['second_third_author'],
-                '4th and 5th Author Position'                  => $r['fourth_fifth_author'],
-                'Other Author Position'                        => $r['other_author'],
-                'Research Funding Sources'                     => $r['research_funding_sources'],
-                'H index'                                      => $r['h_index'],
-                'Total Citations'                              => $r['total_citations'],
-                'Digital Course Development'                   => $r['digital_course_development'],
+                'Book Translations'                           => $r['book_translations'],
+                'National Publications'                       => $r['national_publications'],
+                'Q1 Indexed'                                  => $r['q1_indexed'],
+                'Q2 Indexed'                                  => $r['q2_indexed'],
+                'Q3 Indexed'                                  => $r['q3_indexed'],
+                'Q4 Indexed'                                  => $r['q4_indexed'],
+                'Other Recognized Index'                      => $r['other_recognized_index'],
+                'Internationally Peer Reviewed Journals'      => $r['internationally_peer_reviewed'],
+                '1st Author Position'                         => $r['first_author'],
+                '2nd and 3rd Author Position'                 => $r['second_third_author'],
+                '4th and 5th Author Position'                 => $r['fourth_fifth_author'],
+                'Other Author Position'                       => $r['other_author'],
+                'Research Funding Sources'                    => $r['research_funding_sources'],
+                'H index'                                     => $r['h_index'],
+                'Total Citations'                             => $r['total_citations'],
+                'Digital Course Development'                  => $r['digital_course_development'],
 
-                // Computed fields
                 'Weighted Score' => $r['weighted_score'] ?? '-',
                 'Rank'           => $r['rank'] ?? '-',
                 'Faculty Rank'   => $r['faculty_rank'] ?? '-',
@@ -113,15 +110,40 @@ class TopResearchersController extends Controller
         }, $researchers);
 
         return response()->json([
-            'researchers' => $formatted
+            'researchers'    => $formatted,
+            'availableYears' => $this->availableYears(),
         ]);
+    }
+
+    /**
+     * Distinct years that have at least one published paper in scope.
+     * Respects the same filters the ranking uses (status, deleted, exclude, university).
+     */
+    private function availableYears(): array
+    {
+        $q = DB::table('academic_papers')
+            ->join('lecturers',  'academic_papers.lecturer_id', '=', 'lecturers.id')
+            ->join('faculties',  'lecturers.faculty_id',       '=', 'faculties.id')
+            ->where('academic_papers.status', 'Published')
+            ->whereNull('academic_papers.deleted_at')
+            ->where('lecturers.exclude_from_top_researchers', false)
+            ->whereNotNull('academic_papers.year');
+
+        if ($universityId = currentUniversityId()) {
+            $q->where('faculties.university_id', $universityId);
+        }
+
+        return $q->distinct()
+            ->orderBy('academic_papers.year', 'desc')
+            ->pluck('academic_papers.year')
+            ->toArray();
     }
 
     /**
      * Fetch all researchers with their 23 metrics.
      * This method aggregates data from academic_papers and lecturers.
      */
-    private function fetchResearchersWithMetrics()
+    private function fetchResearchersWithMetrics(?int $year = null)
     {
         // Subquery that joins papers with lecturers, faculties, departments
         // We'll use a single query with conditional SUMs based on the Excel criteria.
@@ -133,102 +155,105 @@ class TopResearchersController extends Controller
             ->leftJoin('universities', 'faculties.university_id', '=', 'universities.id')
             ->where('academic_papers.status', 'Published')
             ->whereNull('academic_papers.deleted_at')
-            ->where('lecturers.exclude_from_top_researchers', false)
-            ->select(
-                'lecturers.id as lecturer_id',
-                'lecturers.lecturername',
-                'faculties.facultyname',
-                'departments.deptname',
-                'lecturers.grade',
-                'universities.name as university_name',
-
-                // 1. Non-indexed National Conference
-                DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Non-Indexed  National (Conference Proceedings)' 
-                                AND academic_papers.collaboration = 'National' THEN 1 ELSE 0 END) as non_indexed_national_conference"),
-
-                // 2. Total Indexed Conference (International collaboration)
-                DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Indexed (Conference Proceedings)'
-                                AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as total_indexed_conference"),
-
-                // 3. Total Book Chapters
-                DB::raw("SUM(CASE WHEN academic_papers.publication = 'Book Chapter' THEN 1 ELSE 0 END) as total_book_chapters"),
-
-                // 4. Books Published (Academic)
-                DB::raw("SUM(CASE WHEN academic_papers.publication = 'Book (Authored) Academic' THEN 1 ELSE 0 END) as books_published_academic"),
-
-                // 5. Books Published (Non-academic)
-                DB::raw("SUM(CASE WHEN academic_papers.publication = 'Book (Authored) Non-academic' THEN 1 ELSE 0 END) as books_published_non_academic"),
-
-                // 6. Non-indexed International Conference
-                DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Non-Indexed (Conference Proceedings)'
-                                AND academic_papers.collaboration = 'International' THEN 1 ELSE 0 END) as non_indexed_international_conference"),
-
-                // 7. Total International Conference Poster Presentation
-                DB::raw("SUM(CASE WHEN academic_papers.publication = 'Conference Presentation (Abstract/Poster)'
-                                AND academic_papers.collaboration IN ('National','International') THEN 1 ELSE 0 END) as total_international_poster"),
-
-                // 8. Book Translations
-                DB::raw("SUM(CASE WHEN academic_papers.publication = 'Translation Work' THEN 1 ELSE 0 END) as book_translations"),
-
-                // 9. National Publications
-                DB::raw("SUM(CASE WHEN academic_papers.collaboration = 'National'
-                                AND academic_papers.indexed = 'Non-Indexed (peer reviewed National)' THEN 1 ELSE 0 END) as national_publications"),
-
-                // 10. Q1 Indexed (International)
-                DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Q1'
-                                AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as q1_indexed"),
-
-                // 11. Q2 Indexed (International)
-                DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Q2'
-                                AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as q2_indexed"),
-
-                // 12. Q3 Indexed (International)
-                DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Q3'
-                                AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as q3_indexed"),
-
-                // 13. Q4 Indexed (International)
-                DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Q4'
-                                AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as q4_indexed"),
-
-                // 14. Other Recognized Index (ORI)
-                DB::raw("SUM(CASE WHEN academic_papers.indexed = 'ORI'
-                                AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as other_recognized_index"),
-
-                // 15. Internationally Peer Reviewed Journals
-                DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Non-Indexed (peer reviewed)'
-                                AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as internationally_peer_reviewed"),
-
-                // 16. 1st Author Position
-                DB::raw("SUM(CASE WHEN academic_papers.author_position in ('1', '1st') THEN 1 ELSE 0 END) as first_author"),
-
-                // 17. 2nd and 3rd Author Position
-                DB::raw("SUM(CASE WHEN academic_papers.author_position IN ('2','3', '2nd', '3rd') THEN 1 ELSE 0 END) as second_third_author"),
-
-                // 18. 4th and 5th Author Position
-                DB::raw("SUM(CASE WHEN academic_papers.author_position IN ('4','5', '4th', '5th') THEN 1 ELSE 0 END) as fourth_fifth_author"),
-
-                // 19. Other Author Position (>5th)
-                DB::raw("SUM(CASE WHEN academic_papers.author_position NOT IN ('1','2','3','4','5', '1st', '2nd', '3rd', '4th', '5th') THEN 1 ELSE 0 END) as other_author"),
-
-                // 20. Research Funding Sources (any of the listed funding types)
-                DB::raw("SUM(CASE WHEN academic_papers.funding IN ('University (Internal)','National Government/Local','International Donor (UN, World Bank, ADB, USAID, etc.)','International Academic/Research Grant','Private/Industry') 
-                                THEN 1 ELSE 0 END) as research_funding_sources"),
-
-                // 21. H-index – you need to store or compute this per researcher
-                DB::raw("0 as h_index"),
-
-                // 22. Total Citations
-                DB::raw("SUM(academic_papers.citation) as total_citations"),
-
-                // 23. Digital Course Development – sum from another table or column
-                DB::raw("SUM(CASE WHEN academic_papers.publication = 'Digital Course' THEN 1 ELSE 0 END) as digital_course_development"),
-            )
-            ->groupBy('lecturers.id', 'lecturers.lecturername', 'faculties.facultyname', 'departments.deptname', 'lecturers.grade', 'universities.name');
+            ->where('lecturers.exclude_from_top_researchers', false);
+        if ($year !== null) {
+            $subQuery->where('academic_papers.year', $year);
+        }
 
         $universityId = currentUniversityId();
         if ($universityId) {
             $subQuery->where('faculties.university_id', $universityId);
         }
+        $subQuery->select(
+            'lecturers.id as lecturer_id',
+            'lecturers.lecturername',
+            'faculties.facultyname',
+            'departments.deptname',
+            'lecturers.grade',
+            'universities.name as university_name',
+
+            // 1. Non-indexed National Conference
+            DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Non-Indexed  National (Conference Proceedings)' 
+                            AND academic_papers.collaboration = 'National' THEN 1 ELSE 0 END) as non_indexed_national_conference"),
+
+            // 2. Total Indexed Conference (International collaboration)
+            DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Indexed (Conference Proceedings)'
+                            AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as total_indexed_conference"),
+
+            // 3. Total Book Chapters
+            DB::raw("SUM(CASE WHEN academic_papers.publication = 'Book Chapter' THEN 1 ELSE 0 END) as total_book_chapters"),
+
+            // 4. Books Published (Academic)
+            DB::raw("SUM(CASE WHEN academic_papers.publication = 'Book (Authored) Academic' THEN 1 ELSE 0 END) as books_published_academic"),
+
+            // 5. Books Published (Non-academic)
+            DB::raw("SUM(CASE WHEN academic_papers.publication = 'Book (Authored) Non-academic' THEN 1 ELSE 0 END) as books_published_non_academic"),
+
+            // 6. Non-indexed International Conference
+            DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Non-Indexed (Conference Proceedings)'
+                            AND academic_papers.collaboration = 'International' THEN 1 ELSE 0 END) as non_indexed_international_conference"),
+
+            // 7. Total International Conference Poster Presentation
+            DB::raw("SUM(CASE WHEN academic_papers.publication = 'Conference Presentation (Abstract/Poster)'
+                            AND academic_papers.collaboration IN ('National','International') THEN 1 ELSE 0 END) as total_international_poster"),
+
+            // 8. Book Translations
+            DB::raw("SUM(CASE WHEN academic_papers.publication = 'Translation Work' THEN 1 ELSE 0 END) as book_translations"),
+
+            // 9. National Publications
+            DB::raw("SUM(CASE WHEN academic_papers.collaboration = 'National'
+                            AND academic_papers.indexed = 'Non-Indexed (peer reviewed National)' THEN 1 ELSE 0 END) as national_publications"),
+
+            // 10. Q1 Indexed (International)
+            DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Q1'
+                            AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as q1_indexed"),
+
+            // 11. Q2 Indexed (International)
+            DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Q2'
+                            AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as q2_indexed"),
+
+            // 12. Q3 Indexed (International)
+            DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Q3'
+                            AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as q3_indexed"),
+
+            // 13. Q4 Indexed (International)
+            DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Q4'
+                            AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as q4_indexed"),
+
+            // 14. Other Recognized Index (ORI)
+            DB::raw("SUM(CASE WHEN academic_papers.indexed = 'ORI'
+                            AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as other_recognized_index"),
+
+            // 15. Internationally Peer Reviewed Journals
+            DB::raw("SUM(CASE WHEN academic_papers.indexed = 'Non-Indexed (peer reviewed)'
+                            AND academic_papers.collaboration LIKE '%International%' THEN 1 ELSE 0 END) as internationally_peer_reviewed"),
+
+            // 16. 1st Author Position
+            DB::raw("SUM(CASE WHEN academic_papers.author_position in ('1', '1st') THEN 1 ELSE 0 END) as first_author"),
+
+            // 17. 2nd and 3rd Author Position
+            DB::raw("SUM(CASE WHEN academic_papers.author_position IN ('2','3', '2nd', '3rd') THEN 1 ELSE 0 END) as second_third_author"),
+
+            // 18. 4th and 5th Author Position
+            DB::raw("SUM(CASE WHEN academic_papers.author_position IN ('4','5', '4th', '5th') THEN 1 ELSE 0 END) as fourth_fifth_author"),
+
+            // 19. Other Author Position (>5th)
+            DB::raw("SUM(CASE WHEN academic_papers.author_position NOT IN ('1','2','3','4','5', '1st', '2nd', '3rd', '4th', '5th') THEN 1 ELSE 0 END) as other_author"),
+
+            // 20. Research Funding Sources (any of the listed funding types)
+            DB::raw("SUM(CASE WHEN academic_papers.funding IN ('University (Internal)','National Government/Local','International Donor (UN, World Bank, ADB, USAID, etc.)','International Academic/Research Grant','Private/Industry') 
+                            THEN 1 ELSE 0 END) as research_funding_sources"),
+
+            // 21. H-index – you need to store or compute this per researcher
+            DB::raw("0 as h_index"),
+
+            // 22. Total Citations
+            DB::raw("SUM(academic_papers.citation) as total_citations"),
+
+            // 23. Digital Course Development – sum from another table or column
+            DB::raw("SUM(CASE WHEN academic_papers.publication = 'Digital Course' THEN 1 ELSE 0 END) as digital_course_development"),
+        )
+        ->groupBy('lecturers.id', 'lecturers.lecturername', 'faculties.facultyname', 'departments.deptname', 'lecturers.grade', 'universities.name');
 
         $results = $subQuery->get();
 
@@ -364,8 +389,11 @@ class TopResearchersController extends Controller
             $selectedFields = [];
         }
 
+        $year = $request->query('year');
+        $year = ($year === null || $year === '' || $year === 'all') ? null : (int) $year;
+
         // Fetch and compute researchers data (same as index method)
-        $researchers = $this->fetchResearchersWithMetrics();
+        $researchers = $this->fetchResearchersWithMetrics($year);
         foreach ($researchers as &$r) {
             $r['weighted_score'] = $this->calculateWeightedScore($r, $this->config);
         }
@@ -541,6 +569,7 @@ class TopResearchersController extends Controller
             'topField'     => $topField,
             'search'       => $search,
             'selectedCount' => count($selectedFields),
+            'year'         => $year,
         ])->render();
 
         // mPDF configuration (Bahij Nazanin, A4 landscape)
@@ -576,14 +605,18 @@ class TopResearchersController extends Controller
         return str_replace($western, $pashto, $string);
     }
 
-    public function getResearcherPapers($id)
+    public function getResearcherPapers(Request $request, $id)
     {
-        $papers = AcademicPaper::where('lecturer_id', $id)
+        $query = AcademicPaper::where('lecturer_id', $id)
             ->select('id', 'title', 'year', 'publication', 'indexed', 'citation')
-            ->orderBy('year', 'desc')
-            ->get();
-        
-        return response()->json($papers);
+            ->orderBy('year', 'desc');
+
+        $year = $request->query('year');
+        if ($year !== null && $year !== '' && $year !== 'all') {
+            $query->where('year', (int) $year);
+        }
+
+        return response()->json($query->get());
     }
 
     /**

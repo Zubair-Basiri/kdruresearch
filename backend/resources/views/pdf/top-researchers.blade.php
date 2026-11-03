@@ -136,6 +136,11 @@
     @if($topField !== 'All')
         <div class="metric-subtext">Showing {{ count($columns) }} selected columns | Search: “{{ $search }}”</div>
     @endif
+    @if(!empty($year))
+    <div style="text-align:center; font-size:16px; color:#475569; margin-bottom:4px;">
+        Year: {{ $year }}
+    </div>
+    @endif
 </div>
 
 <colgroup>

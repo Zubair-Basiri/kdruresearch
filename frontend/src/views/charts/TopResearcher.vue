@@ -15,6 +15,11 @@
           class="search-input"
         />
 
+        <select v-model="selectedYear" class="form-select year-select">
+          <option value="all">All Years</option>
+          <option v-for="y in availableYears" :key="y" :value="y">{{ y }}</option>
+        </select>
+
         <select v-model="topField" class="form-select">
           <option value="" disabled>Rank by metric...</option>
           <option value="All">View All Metrics (Full Profile)</option>
@@ -293,6 +298,8 @@ const selectedFields = ref([...metricFields]);
 const topField = ref('All');
 const tableData = ref([]);
 const search = ref('');
+const selectedYear = ref('all');
+const availableYears = ref([]);
 const page = ref(1);
 const perPage = 9;
 const topInFacultyCount = ref(3);
@@ -448,7 +455,9 @@ async function fetchPapers(researcher) {
   loadingPapers.value = true;
   papers.value = [];
   try {
-    const response = await api.get(`/researcher-papers/${lecturerId}`);
+    const params = {};
+    if (selectedYear.value !== 'all') params.year = selectedYear.value;
+    const response = await api.get(`/researcher-papers/${lecturerId}`, { params });
     papers.value = response.data;
   } catch (error) {
     console.error('Failed to fetch papers:', error);
@@ -478,17 +487,36 @@ watch(topField, (newVal) => {
 });
 
 // ---------- DATA FETCH ----------
-onMounted(async () => {
+const fetchResearchers = async () => {
   loading.value = true;
   try {
-    const response = await api.get('/top-researchers');
+    const params = {};
+    if (selectedYear.value !== 'all') {
+      params.year = selectedYear.value;
+    }
+
+    const response = await api.get('/top-researchers', { params });
     researchers.value = response.data.researchers;
+
+    // Populate the year dropdown once (doesn't change with the filter)
+    if (response.data.availableYears) {
+      availableYears.value = response.data.availableYears;
+    }
+
     generateTable();
   } catch (error) {
     console.error('Failed to fetch researchers', error);
   } finally {
     loading.value = false;
   }
+};
+
+onMounted(fetchResearchers);
+
+// Re-fetch whenever the year changes
+watch(selectedYear, () => {
+  page.value = 1;
+  fetchResearchers();
 });
 
 // ---------- PDF EXPORT ----------
@@ -497,6 +525,7 @@ async function downloadPDF() {
     const params = new URLSearchParams();
     params.append('search', search.value);
     params.append('topField', topField.value);
+    params.append('year', selectedYear.value);
     if (selectedFields.value.length) {
       params.append('selectedFields', selectedFields.value.join(','));
     }
@@ -570,6 +599,11 @@ async function downloadPDF() {
   color: #000000;
 }
 .search-input { flex: 1; min-width: 250px; }
+
+.year-select {
+  min-width: 130px;
+  max-width: 160px;
+}
 
 .btn {
   padding: 10px 20px;
